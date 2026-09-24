@@ -621,7 +621,7 @@ final class SelectionOverlayController {
     /// `Space` before a drag toggles window mode (plan §4.4) in area/window sessions.
     private var canToggleWindowMode: Bool {
         switch config.mode {
-        case .area, .window, .allInOne: break
+        case .area, .window, .allInOne, .recording: break
         case .scrolling, .text: return false
         }
         switch phase {

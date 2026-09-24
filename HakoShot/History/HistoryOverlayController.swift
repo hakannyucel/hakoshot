@@ -5,9 +5,11 @@ import SwiftUI
 
 /// Full-screen History overlay (plan §4.12, report §10).
 ///
-/// Keys: ←/→ browse, Tab cycles filters, Return restores, ⌘C copies, ⌘E edit,
-/// ⌘P pin, Delete/⌫ removes from history, Esc (or ⌘W, or a click on the
-/// backdrop) closes. Restore / Edit / Pin are delegated through the closures
+/// Keys: ←/→ browse, Tab cycles filters, Return restores, ⌘C copies, ⌘E edit
+/// (recordings: the video editor), ⌘P pin, ⌘G convert a recording to GIF,
+/// Delete/⌫ removes from history, Esc (or ⌘W, or a click on the backdrop)
+/// closes. Right-click on a card offers the same actions. Restore / Edit /
+/// Pin / Convert to GIF are delegated through the closures
 /// below because Quick Access, the editor and Pin live elsewhere; the overlay
 /// closes itself before calling them.
 @MainActor
@@ -22,6 +24,10 @@ final class HistoryOverlayController {
     var onEdit: ((HistoryItem, CGImage) -> Void)?
     /// ⌘P: pin to screen.
     var onPin: ((HistoryItem, CGImage) -> Void)?
+    /// ⌘G / "Convert to GIF": recordings (not GIFs) only.
+    var onConvertToGIF: ((HistoryItem) -> Void)?
+    /// "Open in Studio": videos and Studio Mode projects.
+    var onOpenInStudio: ((HistoryItem) -> Void)?
 
     let store: HistoryStore
     private let model = HistoryOverlayModel()
@@ -59,7 +65,8 @@ final class HistoryOverlayController {
         let actions = HistoryFilmstripActions(
             selectFilter: { [weak self] filter in self?.select(filter: filter) },
             restore: { [weak self] in self?.performRestore() },
-            close: { [weak self] in self?.close() }
+            close: { [weak self] in self?.close() },
+            perform: { [weak self] item, action in self?.perform(action, on: item) }
         )
         let hosting = NSHostingView(rootView: HistoryFilmstripView(model: model, actions: actions))
         hosting.frame = NSRect(origin: .zero, size: screen.frame.size)
@@ -158,7 +165,48 @@ final class HistoryOverlayController {
         }
     }
 
+    /// Context menu: selects `item`, then runs the action on it.
+    private func perform(_ action: HistoryCardAction, on item: HistoryItem) {
+        model.selectedID = item.id
+        switch action {
+        case .restore: performRestore()
+        case .copy: performCopy()
+        case .edit: performEdit()
+        case .pin: performPin()
+        case .convertToGIF: performConvertToGIF()
+        case .openInStudio: performOpenInStudio()
+        case .delete: performDelete()
+        }
+    }
+
+    private func performOpenInStudio() {
+        guard let item = model.selectedItem, HistoryCardAction.canOpenInStudio(item) else { return }
+        close()
+        onOpenInStudio?(item)
+    }
+
+    private func performConvertToGIF() {
+        guard let item = model.selectedItem, HistoryCardAction.canConvertToGIF(item) else { return }
+        close()
+        onConvertToGIF?(item)
+    }
+
     private func performCopy() {
+        if let item = model.selectedItem, item.kind.isVideo {
+            // Recordings: the file itself (plan §4.15), never pixels.
+            let saved = item.savedFileURL.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
+            // Studio Mode projects: the .hakostudio package.
+            guard let url = saved ?? store.mediaURL(for: item) ?? store.studioPackageURL(for: item),
+                  FileManager.default.fileExists(atPath: url.path),
+                  ClipboardWriter().writeFile(url: url)
+            else {
+                Log.history.error("copy failed: no media file for \(item.id.uuidString, privacy: .public)")
+                NSSound.beep()
+                return
+            }
+            showToast("Copied to clipboard")
+            return
+        }
         withSelectedImage { [weak self] item, image in
             do {
                 try ClipboardWriter().write(image, fileURL: item.savedFileURL)
@@ -225,6 +273,7 @@ final class HistoryOverlayController {
             case "c": performCopy()
             case "e": performEdit()
             case "p": performPin()
+            case "g": performConvertToGIF()
             case "w": close()
             default: return false
             }

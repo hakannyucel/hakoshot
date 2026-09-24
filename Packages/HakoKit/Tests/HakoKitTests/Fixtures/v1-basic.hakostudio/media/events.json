@@ -1,0 +1,49 @@
+{
+  "clicks" : [
+    {
+      "button" : "left",
+      "clickCount" : 1,
+      "isDown" : true,
+      "time" : 0.5,
+      "x" : 16,
+      "y" : 9
+    },
+    {
+      "button" : "left",
+      "clickCount" : 1,
+      "isDown" : false,
+      "time" : 0.55,
+      "x" : 16,
+      "y" : 9
+    }
+  ],
+  "cursorBakedIn" : false,
+  "cursorShapes" : [
+    {
+      "hash" : "fixturearrow",
+      "height" : 8,
+      "hotSpotX" : 1,
+      "hotSpotY" : 1,
+      "width" : 8
+    }
+  ],
+  "droppedFrames" : 0,
+  "formatVersion" : 1,
+  "geometry" : {
+    "displayID" : 1,
+    "height" : 36,
+    "pixelHeight" : 72,
+    "pixelWidth" : 128,
+    "scale" : 2,
+    "width" : 64,
+    "x" : 0,
+    "y" : 0
+  },
+  "hostTimeOrigin" : 1000,
+  "keys" : [
+
+  ],
+  "pauses" : [
+
+  ]
+}

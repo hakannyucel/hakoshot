@@ -4,9 +4,10 @@ import Carbon.HIToolbox
 import SwiftUI
 
 /// Onboarding steps (M7, plan §2): welcome → Screen Recording → Accessibility
-/// (optional) → macOS screenshot shortcuts → launch at login → done.
+/// (optional) → recording permissions (info only, R7.4) → macOS screenshot
+/// shortcuts → launch at login → done.
 enum OnboardingStep: Int, CaseIterable, Identifiable {
-    case welcome, screenRecording, accessibility, shortcuts, launchAtLogin, done
+    case welcome, screenRecording, accessibility, recordingPermissions, shortcuts, launchAtLogin, done
 
     var id: Int { rawValue }
 }
@@ -76,6 +77,10 @@ final class OnboardingModel {
     var step: OnboardingStep
     /// macOS screenshot shortcuts (symbolic hotkeys 28/29/30/31/184) as read last.
     private(set) var systemShortcuts: [SystemScreenshotShortcut] = []
+    /// Recording permissions as read last (status reads only; never prompts).
+    private(set) var microphoneStatus: MediaAuthorization = .notDetermined
+    private(set) var cameraStatus: MediaAuthorization = .notDetermined
+    private(set) var inputMonitoringStatus: InputMonitoringPermission.Status = .notDetermined
 
     init(permissions: PermissionsService, loginItem: LaunchAtLogin = LaunchAtLogin(), step: OnboardingStep) {
         self.permissions = permissions
@@ -91,6 +96,13 @@ final class OnboardingModel {
             symbolicHotKeys: ShortcutConflictDetector.readSymbolicHotKeys()
         )
         if shortcuts != systemShortcuts { systemShortcuts = shortcuts }
+        // Status reads only: the prompts come when a feature is first used (plan §1.8).
+        let microphone = MediaPermissions.microphone
+        if microphone != microphoneStatus { microphoneStatus = microphone }
+        let camera = CameraPermission.status
+        if camera != cameraStatus { cameraStatus = camera }
+        let inputMonitoring = InputMonitoringPermission.status
+        if inputMonitoring != inputMonitoringStatus { inputMonitoringStatus = inputMonitoring }
     }
 
     var enabledSystemShortcutCount: Int { systemShortcuts.filter(\.isEnabled).count }
@@ -147,6 +159,7 @@ struct OnboardingView: View {
         case .welcome: welcome
         case .screenRecording: screenRecording
         case .accessibility: accessibility
+        case .recordingPermissions: recordingPermissions
         case .shortcuts: shortcuts
         case .launchAtLogin: launchAtLogin
         case .done: done
@@ -215,6 +228,51 @@ struct OnboardingView: View {
                 Note(text: "You can skip this and grant it later from Settings › About.")
             }
         }
+    }
+
+    /// Information only (R7.4): each permission is requested the first time
+    /// its feature is turned on, never from here.
+    private var recordingPermissions: some View {
+        StepLayout(
+            symbol: "record.circle",
+            title: "Screen recording extras",
+            message: "Recording can also use these. Nothing is asked now: macOS asks the first time you turn each one on."
+        ) {
+            VStack(spacing: 0) {
+                RecordingPermissionRow(
+                    symbol: "mic",
+                    title: "Microphone",
+                    detail: "Record your voice with a video",
+                    status: RecordingPermissionRow.Status(model.microphoneStatus),
+                    openSettings: { permissions.openMicrophoneSettings() }
+                )
+                rowDivider
+                RecordingPermissionRow(
+                    symbol: "video",
+                    title: "Camera",
+                    detail: "Show your webcam in a bubble",
+                    status: RecordingPermissionRow.Status(model.cameraStatus),
+                    openSettings: { CameraPermission.openSystemSettings() }
+                )
+                rowDivider
+                RecordingPermissionRow(
+                    symbol: "keyboard",
+                    title: "Input Monitoring",
+                    detail: "Show the keys you press in a recording",
+                    status: RecordingPermissionRow.Status(model.inputMonitoringStatus),
+                    openSettings: { InputMonitoringPermission.openSystemSettings() }
+                )
+            }
+            .background(cardBackground)
+            Note(text: "All three are optional. Screenshots and plain screen recordings work without them.")
+        }
+    }
+
+    private var rowDivider: some View {
+        Rectangle()
+            .fill(Color.dsDivider)
+            .frame(height: Tokens.Stroke.hairline)
+            .padding(.leading, Tokens.Spacing.settingsRowH)
     }
 
     private var shortcuts: some View {
@@ -426,6 +484,76 @@ private struct PermissionCard: View {
                 }
         )
         .animation(DSAnimation.hoverControls, value: granted)
+    }
+}
+
+/// One recording permission: what it is for, its current status and a
+/// System Settings button. Never requests access.
+private struct RecordingPermissionRow: View {
+    enum Status: Equatable {
+        case granted, denied, notAsked
+
+        init(_ authorization: MediaAuthorization) {
+            switch authorization {
+            case .authorized: self = .granted
+            case .denied, .restricted: self = .denied
+            case .notDetermined: self = .notAsked
+            }
+        }
+
+        init(_ status: InputMonitoringPermission.Status) {
+            switch status {
+            case .granted: self = .granted
+            case .denied: self = .denied
+            case .notDetermined: self = .notAsked
+            }
+        }
+
+        var label: String {
+            switch self {
+            case .granted: "Allowed"
+            case .denied: "Off"
+            case .notAsked: "Asked on first use"
+            }
+        }
+
+        var color: Color {
+            switch self {
+            case .granted: .green
+            case .denied: .orange
+            case .notAsked: .secondary
+            }
+        }
+    }
+
+    let symbol: String
+    let title: String
+    let detail: String
+    let status: Status
+    let openSettings: () -> Void
+
+    var body: some View {
+        HStack(spacing: Tokens.Spacing.m) {
+            Image(systemName: symbol)
+                .font(.system(size: Tokens.Onboarding.statusSymbol - 4))
+                .foregroundStyle(.secondary)
+                .frame(width: Tokens.Onboarding.statusSymbol)
+            VStack(alignment: .leading, spacing: Tokens.Spacing.settingsRowTextGap) {
+                Text(title).font(Tokens.Typography.rowLabel.weight(.semibold))
+                Text(detail)
+                    .font(Tokens.Typography.rowDescription)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Text(status.label)
+                .font(Tokens.Typography.rowDescription.weight(.semibold))
+                .foregroundStyle(status.color)
+            Button("Open Settings", action: openSettings)
+                .buttonStyle(PillButtonStyle(style: .neutral))
+        }
+        .padding(.vertical, Tokens.Onboarding.shortcutRowV)
+        .padding(.horizontal, Tokens.Spacing.settingsRowH)
+        .accessibilityElement(children: .combine)
     }
 }
 

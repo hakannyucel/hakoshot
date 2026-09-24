@@ -43,6 +43,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
     case quickAccess
     case wallpaper
     case screenshots
+    case recording
     case annotate
     case advanced
     case about
@@ -56,6 +57,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .quickAccess: "Quick Access"
         case .wallpaper: "Wallpaper"
         case .screenshots: "Screenshots"
+        case .recording: "Screen Recording"
         case .annotate: "Annotate"
         case .advanced: "Advanced"
         case .about: "About"
@@ -69,6 +71,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .quickAccess: "rectangle.on.rectangle"
         case .wallpaper: "photo"
         case .screenshots: "camera"
+        case .recording: "video"
         case .annotate: "pencil.tip"
         case .advanced: "wrench.and.screwdriver"
         case .about: "info.circle"
@@ -83,6 +86,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .quickAccess: Color(.systemGreen)
         case .wallpaper: Color(.systemTeal)
         case .screenshots: Color(.systemBlue)
+        case .recording: Color(.systemRed)
         case .annotate: Color(.systemOrange)
         case .advanced: Color(.systemPurple)
         case .about: Color(.systemGray)
@@ -104,6 +108,7 @@ struct SettingsPageView: View {
         case .quickAccess: QuickAccessSettingsPage()
         case .wallpaper: WallpaperSettingsPage()
         case .screenshots: ScreenshotsSettingsPage()
+        case .recording: RecordingSettingsPage()
         case .annotate: AnnotateSettingsPage()
         case .advanced: AdvancedSettingsPage()
         case .about: AboutSettingsPage()

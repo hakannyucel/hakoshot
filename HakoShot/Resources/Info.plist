@@ -38,6 +38,12 @@
 	<false/>
 	<key>NSScreenCaptureUsageDescription</key>
 	<string>HakoShot needs screen recording access to take screenshots.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>HakoShot records your microphone into screen recordings when you turn it on.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>HakoShot shows your camera in screen recordings.</string>
+	<key>NSCameraUseContinuityCameraDeviceType</key>
+	<true/>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>HakoShot uses Apple Events to hide desktop icons and interact with Finder during capture.</string>
 	<key>CFBundleURLTypes</key>
@@ -81,6 +87,32 @@
 				<string>public.image</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Movie</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.movie</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>HakoShot Studio Project</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSTypeIsPackage</key>
+			<true/>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.hakanyucel.hakoshot.studio</string>
+			</array>
+		</dict>
 	</array>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
@@ -99,6 +131,24 @@
 				<key>public.filename-extension</key>
 				<array>
 					<string>hakoshot</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.hakanyucel.hakoshot.studio</string>
+			<key>UTTypeDescription</key>
+			<string>HakoShot Studio Project</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>com.apple.package</string>
+				<string>public.composite-content</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>hakostudio</string>
 				</array>
 			</dict>
 		</dict>

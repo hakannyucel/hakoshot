@@ -23,6 +23,7 @@ xcodebuild test \
   -configuration Debug \
   -destination "platform=macOS,arch=$(uname -m)" \
   -derivedDataPath "${DERIVED_DATA:-$ROOT/build}" \
+  -parallel-testing-enabled NO \
   ${QUIET[@]+"${QUIET[@]}"}
 
 echo "==> all tests passed"

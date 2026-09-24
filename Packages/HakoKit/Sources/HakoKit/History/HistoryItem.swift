@@ -13,18 +13,33 @@ public enum HistoryCaptureKind: String, Sendable, CaseIterable, Codable, Equatab
     case selfTimer
     case allInOne
     case text
+    /// Classic screen recording, delivered as a video file (kayit-teknik-plan §4.15).
+    case recording
+    /// Recorded (or converted) straight to GIF.
+    case gif
+    /// Studio Mode project (`.hakostudio` package).
+    case studio
     case unknown
 
     public init(from decoder: any Decoder) throws {
         let raw = try decoder.singleValueContainer().decode(String.self)
         self = HistoryCaptureKind(rawValue: raw) ?? .unknown
     }
+
+    /// Whether this entry carries video/GIF/Studio media rather than a still image.
+    public var isVideo: Bool {
+        switch self {
+        case .recording, .gif, .studio: true
+        default: false
+        }
+    }
 }
 
-/// History overlay filter pills (plan §5.4: All / Screenshots / Scrolling / Text).
+/// History overlay filter pills (plan §5.4: All / Screenshots / Recordings / Scrolling / Text).
 public enum HistoryFilter: String, Sendable, CaseIterable, Equatable {
     case all
     case screenshots
+    case recordings
     case scrolling
     case text
 
@@ -32,6 +47,7 @@ public enum HistoryFilter: String, Sendable, CaseIterable, Equatable {
         switch self {
         case .all: "All"
         case .screenshots: "Screenshots"
+        case .recordings: "Recordings"
         case .scrolling: "Scrolling"
         case .text: "Text"
         }
@@ -42,7 +58,24 @@ public enum HistoryFilter: String, Sendable, CaseIterable, Equatable {
         case .all: true
         case .scrolling: kind == .scrolling
         case .text: kind == .text
-        case .screenshots: kind != .scrolling && kind != .text
+        case .recordings: kind.isVideo
+        case .screenshots: kind != .scrolling && kind != .text && !kind.isVideo
+        }
+    }
+}
+
+/// The delivered media's container, for video/GIF/Studio history entries
+/// (kayit-teknik-plan §4.15). Independent of `HistoryCaptureKind` so a
+/// Studio entry's preview clip can still say what it is.
+public enum HistoryMediaFormat: String, Sendable, CaseIterable, Codable, Equatable {
+    case video
+    case gif
+
+    /// Extension used for `HistoryLayout.mediaFileName(id:date:format:)`.
+    public var pathExtension: String {
+        switch self {
+        case .video: "mp4"
+        case .gif: "gif"
         }
     }
 }
@@ -74,6 +107,22 @@ public struct HistoryItem: Sendable, Equatable, Identifiable, Codable {
     public var isClosed: Bool
     public var closedDate: Date?
 
+    // MARK: Video / GIF / Studio (kayit-teknik-plan §4.15, R0.4). All optional
+    // so old `history.json` entries (and plain screenshots) decode unchanged.
+
+    /// The delivered mp4/gif, relative to the history root. `nil` for screenshots.
+    public var mediaFileName: String?
+    /// Media duration in seconds. `nil` for screenshots.
+    public var durationSeconds: Double?
+    /// `mediaFileName`'s container. `nil` for screenshots.
+    public var mediaFormat: HistoryMediaFormat?
+    /// `RecordingMetadata` JSON (`events.json`) copied alongside the media,
+    /// relative to the history root. Reserved for a later package (R5/R6:
+    /// "Open in Studio" from history); `addRecording` (R0.4) does not set it yet.
+    public var eventsFileName: String?
+    /// Studio Mode `.hakostudio` package, relative to the history root.
+    public var studioPackageName: String?
+
     public init(
         id: UUID = UUID(),
         date: Date,
@@ -86,7 +135,12 @@ public struct HistoryItem: Sendable, Equatable, Identifiable, Codable {
         savedFileURL: URL? = nil,
         projectFileName: String? = nil,
         isClosed: Bool = false,
-        closedDate: Date? = nil
+        closedDate: Date? = nil,
+        mediaFileName: String? = nil,
+        durationSeconds: Double? = nil,
+        mediaFormat: HistoryMediaFormat? = nil,
+        eventsFileName: String? = nil,
+        studioPackageName: String? = nil
     ) {
         self.id = id
         self.date = date
@@ -100,21 +154,33 @@ public struct HistoryItem: Sendable, Equatable, Identifiable, Codable {
         self.projectFileName = projectFileName
         self.isClosed = isClosed
         self.closedDate = closedDate
+        self.mediaFileName = mediaFileName
+        self.durationSeconds = durationSeconds
+        self.mediaFormat = mediaFormat
+        self.eventsFileName = eventsFileName
+        self.studioPackageName = studioPackageName
     }
 
     /// Size in points (`pixels / scale`).
     public var pointWidth: Double { Double(pixelWidth) / max(scale, 1) }
     public var pointHeight: Double { Double(pixelHeight) / max(scale, 1) }
 
-    /// Every file this entry owns, relative to the history root.
+    /// Every file this entry owns, relative to the history root (retention
+    /// deletes all of these; `studioPackageName` is a package directory, also
+    /// removed fine by a plain `FileManager.removeItem`).
     public var ownedFileNames: [String] {
-        [imageFileName, thumbnailFileName] + (projectFileName.map { [$0] } ?? [])
+        [imageFileName, thumbnailFileName]
+            + (projectFileName.map { [$0] } ?? [])
+            + (mediaFileName.map { [$0] } ?? [])
+            + (eventsFileName.map { [$0] } ?? [])
+            + (studioPackageName.map { [$0] } ?? [])
     }
 
     private enum CodingKeys: String, CodingKey {
         case id, date, kind, pixelWidth, pixelHeight, scale
         case imageFileName, thumbnailFileName, savedFileURL, projectFileName
         case isClosed, closedDate
+        case mediaFileName, durationSeconds, mediaFormat, eventsFileName, studioPackageName
     }
 
     public init(from decoder: any Decoder) throws {
@@ -132,6 +198,11 @@ public struct HistoryItem: Sendable, Equatable, Identifiable, Codable {
         projectFileName = try? c.decodeIfPresent(String.self, forKey: .projectFileName)
         isClosed = (try? c.decodeIfPresent(Bool.self, forKey: .isClosed)) ?? false
         closedDate = try? c.decodeIfPresent(Date.self, forKey: .closedDate)
+        mediaFileName = try? c.decodeIfPresent(String.self, forKey: .mediaFileName)
+        durationSeconds = try? c.decodeIfPresent(Double.self, forKey: .durationSeconds)
+        mediaFormat = (try? c.decodeIfPresent(HistoryMediaFormat.self, forKey: .mediaFormat)) ?? nil
+        eventsFileName = try? c.decodeIfPresent(String.self, forKey: .eventsFileName)
+        studioPackageName = try? c.decodeIfPresent(String.self, forKey: .studioPackageName)
     }
 }
 
@@ -163,6 +234,26 @@ public enum HistoryLayout {
 
     public static func projectFileName(id: UUID, date: Date, calendar: Calendar = .current) -> String {
         "\(monthFolder(for: date, calendar: calendar))/\(id.uuidString).\(projectExtension)"
+    }
+
+    // MARK: Video / GIF / Studio (kayit-teknik-plan §4.15, R0.4)
+
+    public static let eventsSuffix = "-events.json"
+    public static let studioPackageExtension = "hakostudio"
+
+    /// `<yyyy-MM>/<uuid>.mp4` or `.gif`, matching `format`.
+    public static func mediaFileName(id: UUID, date: Date, format: HistoryMediaFormat, calendar: Calendar = .current) -> String {
+        "\(monthFolder(for: date, calendar: calendar))/\(id.uuidString).\(format.pathExtension)"
+    }
+
+    /// `<yyyy-MM>/<uuid>-events.json` (copied `RecordingMetadata`, reserved for a later package).
+    public static func eventsFileName(id: UUID, date: Date, calendar: Calendar = .current) -> String {
+        "\(monthFolder(for: date, calendar: calendar))/\(id.uuidString)\(eventsSuffix)"
+    }
+
+    /// `<yyyy-MM>/<uuid>.hakostudio` package.
+    public static func studioPackageName(id: UUID, date: Date, calendar: Calendar = .current) -> String {
+        "\(monthFolder(for: date, calendar: calendar))/\(id.uuidString).\(studioPackageExtension)"
     }
 
     /// `2026-09/<uuid>.png` → `2026-09/<uuid>-thumb.jpg`.

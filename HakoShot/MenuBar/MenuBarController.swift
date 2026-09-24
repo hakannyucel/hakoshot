@@ -13,18 +13,28 @@ extension SettingsKey where Value == Bool {
 
 /// Owns the `NSStatusItem`. The menu is rebuilt each time it opens so dynamic
 /// items (checkmarks, pins) reflect `AppCoordinator.menuState`.
+///
+/// While recording (kayit-teknik-plan §4.4) the icon becomes a red dot (plus
+/// the elapsed time with "Display recording time in menu bar"), the item stays
+/// visible even with "Show menu bar icon" off, and the menu is the recording
+/// menu (Stop, Pause/Resume, Restart, Discard).
 final class MenuBarController: NSObject, NSMenuDelegate {
     private let statusItem: NSStatusItem
     private let menu = NSMenu()
     private weak var coordinator: AppCoordinator?
+    private let icon: NSImage?
+    private let recordingIndicator = RecordingMenuBarIndicatorModel()
+    /// Refreshes the timer while recording.
+    private var indicatorTask: Task<Void, Never>?
 
     init(coordinator: AppCoordinator) {
         self.coordinator = coordinator
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        super.init()
-
         let image = NSImage(systemSymbolName: "camera.viewfinder", accessibilityDescription: "HakoShot")
         image?.isTemplate = true
+        icon = image
+        super.init()
+
         statusItem.button?.image = image
 
         menu.delegate = self
@@ -33,6 +43,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         statusItem.menu = menu
 
         applyVisibilitySetting()
+        coordinator.menuBarTitleProvider = { [weak self] in
+            guard let button = self?.statusItem.button else { return nil }
+            return button.attributedTitle.length > 0 ? button.attributedTitle.string : nil
+        }
         // KVO (not didChangeNotification) so `defaults write` from outside also applies.
         UserDefaults.standard.addObserver(self, forKeyPath: Self.visibilityKeyName, options: [.new], context: nil)
     }
@@ -49,9 +63,9 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         Task { @MainActor [weak self] in self?.applyVisibilitySetting() }
     }
 
-    /// Follows Settings > General "Show menu bar icon".
+    /// Follows Settings > General "Show menu bar icon" (always visible while recording).
     private func applyVisibilitySetting() {
-        let visible = AppSettings.shared.value(for: .showMenuBarIcon)
+        let visible = AppSettings.shared.value(for: .showMenuBarIcon) || recordingIndicator.isRecording
         guard statusItem.isVisible != visible else { return }
         statusItem.isVisible = visible
         Log.menu.notice("menu bar icon visible: \(visible)")
@@ -66,10 +80,46 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         rebuild()
     }
 
-    /// Rebuilds the menu from `AppCoordinator.menuState` (also called when pins change).
+    /// Rebuilds the menu from `AppCoordinator.menuState` (also called when pins
+    /// or the recording change).
     func rebuild() {
         guard let coordinator else { return }
         MenuBuilder.populate(menu, state: coordinator.menuState, target: self)
+        updateRecordingIndicator()
+    }
+
+    /// Red dot (+ timer) while recording, the normal icon otherwise.
+    private func updateRecordingIndicator() {
+        guard let coordinator, let button = statusItem.button else { return }
+        let wasRecording = recordingIndicator.isRecording
+        recordingIndicator.update(
+            session: coordinator.recording.session,
+            showsTimeInMenuBar: AppSettings.shared.value(for: .recordingShowTimeInMenuBar)
+        )
+        if let title = RecordingMenuBarIndicator.attributedTitle(recordingIndicator) {
+            if !button.attributedTitle.isEqual(to: title) { button.attributedTitle = title }
+            if button.image != nil {
+                button.image = nil
+                statusItem.length = NSStatusItem.variableLength
+            }
+            if indicatorTask == nil {
+                indicatorTask = Task { [weak self] in
+                    while !Task.isCancelled {
+                        try? await Task.sleep(for: .milliseconds(250))
+                        self?.updateRecordingIndicator()
+                    }
+                }
+            }
+        } else {
+            indicatorTask?.cancel()
+            indicatorTask = nil
+            if button.image == nil {
+                button.attributedTitle = NSAttributedString()
+                button.image = icon
+                statusItem.length = NSStatusItem.squareLength
+            }
+        }
+        if wasRecording != recordingIndicator.isRecording { applyVisibilitySetting() }
     }
 
     @objc func performMenuCommand(_ sender: NSMenuItem) {

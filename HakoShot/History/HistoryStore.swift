@@ -36,7 +36,9 @@ actor HistoryStore {
     nonisolated let rootURL: URL
     private let configuration: @Sendable () async -> HistoryConfiguration
     private let now: @Sendable () -> Date
-    private let calendar: Calendar
+    /// Internal (not `private`) so `HistoryStore+Recording.swift` (R0.4) can
+    /// build video file names with the same calendar as everything else.
+    let calendar: Calendar
 
     private var index = HistoryIndex()
     private var isLoaded = false
@@ -69,6 +71,26 @@ actor HistoryStore {
     nonisolated func imageURL(for item: HistoryItem) -> URL { fileURL(item.imageFileName) }
 
     // MARK: - Adding
+
+    /// Current settings snapshot. Internal hook for `HistoryStore+Recording.swift`
+    /// (R0.4), which needs the same "is history on" gate as `add(_:savedURL:id:)`
+    /// but can't reach the private `configuration` closure from another file.
+    func currentConfiguration() async -> HistoryConfiguration {
+        await configuration()
+    }
+
+    /// Inserts an already-built entry (its files are already on disk) and
+    /// persists the index. Internal hook for `HistoryStore+Recording.swift`
+    /// (R0.4): `add(_:savedURL:id:)` above is screenshot-specific (it also
+    /// writes the PNG/JPEG itself), so recordings need their own file-writing
+    /// but still go through the same index + persistence.
+    @discardableResult
+    func insert(_ item: HistoryItem) -> HistoryItem {
+        ensureLoaded()
+        index.add(item)
+        persist()
+        return item
+    }
 
     /// Stores `result` as a new entry. Returns `nil` when history is off
     /// (disabled or retention `.never`) or writing failed. Pass `id` to know the
@@ -150,6 +172,14 @@ actor HistoryStore {
     func setProjectFileName(_ name: String?, for id: UUID) {
         ensureLoaded()
         guard index.update(id: id, { $0.projectFileName = name }) != nil else { return }
+        persist()
+    }
+
+    /// Links a Studio package (Studio Mode recording or "Open in Studio"),
+    /// root-relative (`HistoryLayout.studioPackageName(id:date:)`).
+    func setStudioPackageName(_ name: String?, for id: UUID) {
+        ensureLoaded()
+        guard index.update(id: id, { $0.studioPackageName = name }) != nil else { return }
         persist()
     }
 
@@ -395,9 +425,13 @@ extension CaptureMode {
 
 extension HistoryCaptureKind {
     /// Best-effort mapping back to a capture mode (restore → Quick Access).
+    /// `CaptureMode` has no video equivalent, so video/GIF/Studio entries
+    /// (R0.4) fall back to `.area` like `.unknown`; restoring them into
+    /// Quick Access as a *video* card is R0.5's `QuickAccessItem` (it reads
+    /// `HistoryItem.kind.isVideo` / `mediaFileName` directly, not this bridge).
     nonisolated var captureMode: CaptureMode {
         switch self {
-        case .area, .unknown: .area
+        case .area, .unknown, .recording, .gif, .studio: .area
         case .window: .window
         case .fullscreen: .fullscreen(.preferred)
         case .previousArea: .previousArea

@@ -12,6 +12,13 @@ public enum HistoryRetention: String, Sendable, CaseIterable, Equatable, Codable
 
     public static let `default`: HistoryRetention = .oneMonth
 
+    /// Hard cap on total video/GIF/Studio media bytes kept in history
+    /// (kayit-teknik-plan §4.15, §5: "video saklama: tam kopya", 10 GB, oldest
+    /// evicted first). Independent of the date-based retention above — it
+    /// applies even when `self == .oneMonth` etc. Decimal GB (10 × 1000³),
+    /// matching Finder / `df` sizes.
+    public static let videoByteCap: Int64 = 10_000_000_000
+
     public var title: String {
         switch self {
         case .never: "Never"
@@ -56,5 +63,36 @@ public struct RetentionPolicy: Sendable, Equatable {
     /// Entries to delete (files + index rows), in input order.
     public func itemsToPurge(in items: [HistoryItem], now: Date) -> [HistoryItem] {
         items.filter { isExpired($0, now: now) }
+    }
+}
+
+/// Decides which video/GIF/Studio history entries to evict once their
+/// combined media size passes `HistoryRetention.videoByteCap` (kayit-teknik-plan
+/// §4.15, §5). Pure: the app measures each entry's media file on disk and
+/// passes the sizes in; this type only decides oldest-first eviction order.
+public struct VideoRetentionPolicy: Sendable, Equatable {
+    public var byteCap: Int64
+
+    public init(byteCap: Int64 = HistoryRetention.videoByteCap) {
+        self.byteCap = byteCap
+    }
+
+    /// Entries to delete, oldest (`date`) first, until the remaining total
+    /// fits under `byteCap`. `sizes` maps an entry's id to its media file
+    /// size in bytes; entries missing from `sizes` are never evicted here
+    /// (e.g. screenshots, or an entry whose size couldn't be read).
+    public func itemsToEvict(in items: [HistoryItem], sizes: [UUID: Int64]) -> [HistoryItem] {
+        let known = items.filter { sizes[$0.id] != nil }
+        var total = known.reduce(Int64(0)) { $0 + (sizes[$1.id] ?? 0) }
+        guard total > byteCap else { return [] }
+
+        let oldestFirst = known.sorted { $0.date < $1.date }
+        var evicted: [HistoryItem] = []
+        for item in oldestFirst {
+            guard total > byteCap else { break }
+            evicted.append(item)
+            total -= sizes[item.id] ?? 0
+        }
+        return evicted
     }
 }

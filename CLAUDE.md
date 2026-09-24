@@ -17,6 +17,7 @@ Ekran görüntüsü almak, düzenlemek ve sabitlemek için kişisel macOS menü 
 
 - `HakoShot/`: uygulama (AppKit + SwiftUI), özellik başına klasör.
 - `Packages/HakoKit/`: saf mantık (AppKit/SwiftUI yok), `swift test` ile test edilir.
+- Ekran kaydı (Studio Mode dahil): `HakoShot/Recording/`; plan ve ilerleme `reports/kayit-*.md`.
 - Komutlar: `scripts/build.sh`, `scripts/test.sh`, `scripts/install.sh` (derler, `/Applications/HakoShot.app`'e kurar ve açar). Paralel çalışmada `DERIVED_DATA=<yol>` ve `SWIFTPM_SCRATCH=<yol>` ile ayrı klasör kullan.
 - Duman testleri `hakoshot://` URL'leriyle yapılır (ör. `open "hakoshot://capture-area?x=100&y=100&width=400&height=300&action=save"`).
 - Güncel durum ve API özetleri: `reports/ilerleme.md`. Tasarım kararları: `reports/hakoshot-teknik-plan.md`, `reports/kapsam-kararlari.md`.

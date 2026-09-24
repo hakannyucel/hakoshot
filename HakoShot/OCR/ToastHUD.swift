@@ -15,6 +15,9 @@ enum ToastHUD {
         /// `url` is non-nil exactly when the "Open" button should show.
         case linkCopied(url: URL?)
         case message(String)
+        /// A message with an "Open Settings" button for a privacy pane
+        /// (recording: camera or Input Monitoring access is off).
+        case permission(String, pane: PermissionsService.Pane)
     }
 
     private static var panel: ToastPanel?
@@ -38,9 +41,10 @@ enum ToastHUD {
         hostedPanel.setContentSize(size)
         hostedPanel.setFrameOrigin(origin(for: size, near: anchor))
 
-        if case .linkCopied(.some) = content {
+        switch content {
+        case .linkCopied(.some), .permission:
             hostedPanel.ignoresMouseEvents = false
-        } else {
+        default:
             hostedPanel.ignoresMouseEvents = true
         }
 
@@ -152,6 +156,19 @@ private struct ToastContentView: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, Tokens.Spacing.m)
                     .padding(.vertical, Tokens.Spacing.s)
+
+            case let .permission(text, pane):
+                HStack(spacing: Tokens.Spacing.m) {
+                    Text(text)
+                        .font(Tokens.Typography.pillLabel)
+                        .foregroundStyle(.white)
+                    Button("Open Settings") { PermissionsService.openSystemSettings(pane) }
+                        .buttonStyle(.plain)
+                        .font(Tokens.Typography.pillLabel.bold())
+                        .foregroundStyle(Color.dsAccent)
+                }
+                .padding(.horizontal, Tokens.Spacing.m)
+                .padding(.vertical, Tokens.Spacing.s)
             }
         }
         .fixedSize()

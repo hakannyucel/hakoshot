@@ -14,6 +14,11 @@ nonisolated struct OverlayConfig: Sendable, Equatable {
         case scrolling
         /// Area selection for OCR.
         case text
+        /// Area / window selection that starts a screen recording
+        /// (kayit-teknik-plan §3, §4.1). For now it behaves like `.area`
+        /// (Space toggles window mode); R1 changes the hint text and Return
+        /// (Record Video) / ⌥Return (Record GIF).
+        case recording
     }
 
     var mode: Mode

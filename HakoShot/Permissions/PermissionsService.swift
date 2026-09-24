@@ -70,9 +70,17 @@ final class PermissionsService {
     enum Pane: String {
         case screenRecording = "Privacy_ScreenCapture"
         case accessibility = "Privacy_Accessibility"
+        case microphone = "Privacy_Microphone"
+        case camera = "Privacy_Camera"
+        case inputMonitoring = "Privacy_ListenEvent"
     }
 
     func openSystemSettings(_ pane: Pane) {
+        Self.openSystemSettings(pane)
+    }
+
+    /// Same as the instance method, for places without the service (HUD, Settings rows).
+    static func openSystemSettings(_ pane: Pane) {
         let string = "x-apple.systempreferences:com.apple.preference.security?\(pane.rawValue)"
         guard let url = URL(string: string) else { return }
         NSWorkspace.shared.open(url)

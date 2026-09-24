@@ -22,6 +22,39 @@ import Foundation
 /// | `unlock-all-pins` | `.unlockAllPins` |
 /// | `open-settings[?page=]` | `.openSettings` / `.openSettingsPage(page)` |
 /// | `open-onboarding` | `.openOnboarding` |
+/// | `record-screen[?mode=area|window|fullscreen][&x=&y=&width=&height=][&display=][&start=][&action=][&format=video|gif][&studio=]` | `.record(kind, …)` (rect + `start=true` skips the overlay) |
+/// | `stop-recording` | `.stopRecording` |
+/// | `pause-recording` / `resume-recording` | `.pauseRecording` / `.resumeRecording` |
+/// | `toggle-pause-recording` (`toggle-recording-pause`) | `.togglePauseRecording` |
+/// | `restart-recording` | `.restartRecording` |
+/// | `discard-recording` | `.discardRecording(confirm: false)` |
+/// | `open-video-editor[?filepath=]` | `.openVideoEditor(URL?)` (no file: open panel) |
+/// | `convert-to-gif?filepath=[&action=save|copy]` | `.convertToGIF(URL, action:)` |
+/// | `open-studio[?filepath=]` | `.openStudio(URL?)` (`.hakostudio` or a video; no file: open panel) |
+///
+/// DEBUG-only `record-screen` parameters: `duration=<s>` (auto-stop),
+/// `countdown=<s>`, `out=<path>` (write the mp4 there, skip the router),
+/// `source=screen|synthetic`, `window=frontmost|test|<id>` (window mode
+/// without the overlay).
+///
+/// DEBUG-only commands (R3, R7.4): `debug-render?filepath=&recipe=<json>&out=[&passthrough=0]`,
+/// `debug-video-editor?filepath=&snapshot=<png>[&recipe=&t=&crop=1&keep=1]`,
+/// `debug-video-editor-apply?filepath=&recipe=<json>[&out=][&historyid=]`,
+/// `debug-crash-during-recording[?seconds=&source=]`, `debug-recover-recordings[?out=]`.
+///
+/// DEBUG-only `record-screen` overrides (R4.I, R5.I): `camera=1|0|pattern`
+/// (`pattern` = test-pattern bubble, no camera / TCC), `clicks=1|0`,
+/// `keys=1|0`. With `out=`, `events.json`, `cursor.bin` and `camera.mov`
+/// are copied next to it as `<out>.events.json` etc.
+/// DEBUG-only webcam / input commands: `debug-camera-devices?out=`,
+/// `debug-record-camera?out=[&seconds=&source=camera|pattern&device=]`,
+/// `debug-webcam-bubble[?shape=&size=&corner=&mirror=&fullscreen=&x=&y=&width=&height=&pattern=&hold=&snapshot=]`,
+/// `debug-inject-input?kind=click|key[&x=&y=&button=&keys=cmd+shift+f&repeat=]`,
+/// `debug-recording-events?out=`, `debug-overlay-demo?x=&y=[&snapshot=&button=&keys=]`.
+/// DEBUG-only Studio commands (R6.4, R7.3): `debug-render-studio-frame`,
+/// `debug-export-studio`, `debug-studio-snapshot`, `debug-studio-zoom`,
+/// `debug-studio-sample` (`StudioDebug.Command`), `debug-benchmark-export`,
+/// `debug-close-studio-windows`; `debug-crash-during-recording` takes `studio=1`.
 ///
 /// `action` is one of `copy`, `save`, `annotate`, `pin`.
 nonisolated enum URLSchemeHandler {
@@ -46,6 +79,16 @@ nonisolated enum URLSchemeHandler {
         guard !command.isEmpty else { throw .missingCommand }
 
         let params = Parameters(components.queryItems ?? [])
+
+        #if DEBUG
+        do {
+            if let studio = try StudioDebug.Command(host: command, queryItems: components.queryItems ?? []) {
+                return .debugStudio(studio)
+            }
+        } catch {
+            throw .invalidParameter(name: command, value: error.description)
+        }
+        #endif
 
         switch command {
         case "capture-area":
@@ -84,6 +127,36 @@ nonisolated enum URLSchemeHandler {
             return .unlockAllPins
         case "open-onboarding":
             return .openOnboarding
+        case "record-screen":
+            return try recordCommand(params)
+        case "stop-recording":
+            return .stopRecording
+        case "pause-recording":
+            return .pauseRecording
+        case "resume-recording":
+            return .resumeRecording
+        case "toggle-pause-recording", "toggle-recording-pause":
+            return .togglePauseRecording
+        case "restart-recording":
+            return .restartRecording
+        case "discard-recording":
+            return .discardRecording(confirm: false)
+        case "open-video-editor":
+            return .openVideoEditor(fileURL(params.string("filepath", "path")))
+        case "open-studio":
+            return .openStudio(fileURL(params.string("filepath", "path")))
+        case "convert-to-gif":
+            guard let file = fileURL(params.string("filepath", "path")) else {
+                throw .invalidParameter(name: "filepath", value: "")
+            }
+            var action: PostCaptureAction?
+            if let raw = params.string("action") {
+                guard let parsed = PostCaptureAction(rawValue: raw.lowercased()), parsed == .save || parsed == .copy else {
+                    throw .invalidParameter(name: "action", value: raw)
+                }
+                action = parsed
+            }
+            return .convertToGIF(file, action: action)
         case "open-settings":
             if let page = params.string("page", "tab"), !page.isEmpty {
                 return .openSettingsPage(page.lowercased())
@@ -139,6 +212,94 @@ nonisolated enum URLSchemeHandler {
                 throw .invalidParameter(name: "path", value: "")
             }
             return .debugSnapshotSettings(page: (params.string("page") ?? "general").lowercased(), url: url)
+        case "debug-record":
+            return .debugRecord(RecordingDebug.Parameters(queryItems: components.queryItems ?? []))
+        case "debug-media-info":
+            guard let file = fileURL(params.string("filepath", "path")) else {
+                throw .invalidParameter(name: "filepath", value: "")
+            }
+            guard let out = fileURL(params.string("out")) else { throw .invalidParameter(name: "out", value: "") }
+            return .debugMediaInfo(file: file, out: out)
+        case "debug-quick-access-video-sample":
+            let format: RecordingFormat = params.string("format")?.lowercased() == "gif" ? .gif : .video
+            return .debugQuickAccessVideoSample(format: format, hover: try params.bool("hover") ?? false)
+        case "debug-history-sample-video":
+            return .debugHistorySampleVideo
+        case "debug-recording-state":
+            guard let out = fileURL(params.string("out", "filepath", "path")) else { throw .invalidParameter(name: "out", value: "") }
+            return .debugRecordingState(out)
+        case "debug-recording-chrome":
+            guard let parameters = RecordingChromeDebug.Parameters(queryItems: components.queryItems ?? []) else {
+                throw .invalidParameter(name: "snapshot", value: params.string("snapshot") ?? "")
+            }
+            return .debugRecordingChrome(parameters)
+        case "debug-recording-hud":
+            return .debugRecordingHUD(RecordingHUDDebug.Parameters(queryItems: components.queryItems ?? []))
+        case "debug-move-test-window":
+            return .debugMoveTestWindow(RecordingTargetDebug.MoveParameters(queryItems: components.queryItems ?? []))
+        case "debug-close-test-window":
+            return .debugCloseTestWindow
+        case "debug-record-window":
+            return .debugRecordWindow(RecordingTargetDebug.RecordWindowParameters(queryItems: components.queryItems ?? []))
+        case "debug-audio-devices":
+            guard let out = fileURL(params.string("out", "filepath", "path")) else { throw .invalidParameter(name: "out", value: "") }
+            return .debugAudioDevices(out)
+        case "debug-finalize":
+            guard let parameters = RecordingAudioDebug.FinalizeParameters(queryItems: components.queryItems ?? []) else {
+                throw .invalidParameter(name: "filepath", value: params.string("filepath", "path") ?? "")
+            }
+            return .debugFinalize(parameters)
+        case "debug-render":
+            do {
+                return .debugRender(try RenderDebug.Parameters(queryItems: components.queryItems ?? []))
+            } catch {
+                throw .invalidParameter(name: "filepath/out/recipe", value: params.string("recipe") ?? "")
+            }
+        case "debug-video-editor":
+            do {
+                return .debugVideoEditor(try VideoEditorDebug.SnapshotParameters(queryItems: components.queryItems ?? []))
+            } catch {
+                throw .invalidParameter(name: "filepath", value: "")
+            }
+        case "debug-video-editor-apply":
+            do {
+                return .debugVideoEditorApply(try VideoEditorDebug.ApplyParameters(queryItems: components.queryItems ?? []))
+            } catch {
+                throw .invalidParameter(name: "filepath", value: "")
+            }
+        case "debug-crash-during-recording":
+            return .debugCrashDuringRecording(RecoveryDebug.CrashParameters(queryItems: components.queryItems ?? []))
+        case "debug-recover-recordings":
+            return .debugRecoverRecordings(out: fileURL(params.string("out", "filepath", "path")))
+        case "debug-camera-devices":
+            return .debugCameraDevices(components.queryItems ?? [])
+        case "debug-record-camera":
+            guard let parameters = CameraDebug.RecordParameters(queryItems: components.queryItems ?? []) else {
+                throw .invalidParameter(name: "out", value: params.string("out") ?? "")
+            }
+            return .debugRecordCamera(parameters)
+        case "debug-webcam-bubble":
+            return .debugWebcamBubble(CameraDebug.BubbleParameters(queryItems: components.queryItems ?? []))
+        case "debug-inject-input":
+            guard let parameters = InputDebug.InjectParameters(queryItems: components.queryItems ?? []) else {
+                throw .invalidParameter(name: "kind", value: params.string("kind") ?? "")
+            }
+            return .debugInjectInput(parameters)
+        case "debug-recording-events":
+            guard let out = fileURL(params.string("out", "filepath", "path")) else { throw .invalidParameter(name: "out", value: "") }
+            return .debugRecordingEvents(out)
+        case StudioBenchmarkDebug.host:
+            guard let spec = try? StudioBenchmarkDebug.spec(host: command, queryItems: components.queryItems ?? []) else {
+                throw .invalidParameter(name: "out", value: params.string("out") ?? "")
+            }
+            return .debugBenchmarkExport(spec)
+        case "debug-close-studio-windows":
+            return .debugCloseStudioWindows
+        case "debug-overlay-demo":
+            guard let parameters = OverlayDemoDebug.Parameters(queryItems: components.queryItems ?? []) else {
+                throw .invalidParameter(name: "x/y", value: "")
+            }
+            return .debugOverlayDemo(parameters)
         #endif
         default:
             throw .unknownCommand(rawCommand)
@@ -162,6 +323,66 @@ nonisolated enum URLSchemeHandler {
             options.rect = try rect(params)
         }
         return options
+    }
+
+    /// `record-screen` (kayit-teknik-plan §4.21).
+    private static func recordCommand(_ params: Parameters) throws(URLSchemeError) -> AppCommand {
+        let kind: RecordingTargetKind
+        switch params.string("mode")?.lowercased() {
+        case nil, "", "area": kind = .area
+        case "window": kind = .window
+        case "fullscreen", "display": kind = .fullscreen
+        case let other?: throw .invalidParameter(name: "mode", value: other)
+        }
+        var options = RecordingCommandOptions()
+        options.rect = try rect(params)
+        if let display = try params.number("display") {
+            guard display >= 1, display == display.rounded() else { throw .invalidParameter(name: "display", value: "\(display)") }
+            options.display = Int(display)
+        }
+        if let raw = params.string("format") {
+            guard let format = RecordingFormat(rawValue: raw.lowercased()) else { throw .invalidParameter(name: "format", value: raw) }
+            options.format = format
+        }
+        options.studio = try params.bool("studio") ?? false
+        options.start = try params.bool("start") ?? false
+        if let raw = params.string("action") {
+            guard let action = PostCaptureAction(rawValue: raw.lowercased()), action == .save || action == .copy else {
+                throw .invalidParameter(name: "action", value: raw)
+            }
+            options.action = action
+        }
+        #if DEBUG
+        if let duration = try params.number("duration") {
+            guard duration > 0 else { throw .invalidParameter(name: "duration", value: "\(duration)") }
+            options.autoStopAfter = duration
+        }
+        if let countdown = try params.number("countdown") {
+            guard countdown >= 0 else { throw .invalidParameter(name: "countdown", value: "\(countdown)") }
+            options.countdownSeconds = Int(countdown)
+        }
+        options.outputURL = fileURL(params.string("out"))
+        if let raw = params.string("source") {
+            guard let source = RecordingSourceKind(rawValue: raw.lowercased()) else { throw .invalidParameter(name: "source", value: raw) }
+            options.source = source
+        }
+        if let window = params.string("window"), !window.isEmpty {
+            guard RecordingTargetDebug.WindowSelector(window) != nil else { throw .invalidParameter(name: "window", value: window) }
+            options.window = window.lowercased()
+        }
+        if let raw = params.string("camera") {
+            switch raw.lowercased() {
+            case "1", "true", "yes", "on": options.camera = .on
+            case "0", "false", "no", "off": options.camera = .off
+            case "pattern": options.camera = .pattern
+            default: throw .invalidParameter(name: "camera", value: raw)
+            }
+        }
+        options.highlightsClicks = try params.bool("clicks")
+        options.showsKeystrokes = try params.bool("keys")
+        #endif
+        // `window=` alone means window mode.
+        return .record(options.window != nil && params.string("mode") == nil ? .window : kind, options)
     }
 
     private static func rect(_ params: Parameters) throws(URLSchemeError) -> CGRect? {

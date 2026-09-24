@@ -2,7 +2,8 @@ import AppKit
 import KeyboardShortcuts
 import os
 
-/// Global shortcut names and their defaults (plan §5.1). KeyboardShortcuts
+/// Global shortcut names and their defaults (plan §5.1; recording:
+/// kayit-teknik-plan §4.21). KeyboardShortcuts
 /// stores the user's value in `UserDefaults` (`KeyboardShortcuts_<name>`);
 /// `initial:` is written only when nothing is stored yet.
 ///
@@ -17,6 +18,15 @@ extension KeyboardShortcuts.Name {
     static let capturePreviousArea = Self("capturePreviousArea", initial: .init(.six, modifiers: [.command, .shift]))
     static let scrollingCapture = Self("scrollingCapture", initial: .init(.seven, modifiers: [.command, .shift]))
     static let selfTimer = Self("selfTimer", initial: .init(.eight, modifiers: [.command, .shift]))
+    /// Record Screen; stops while recording (kayit-teknik-plan §4.21, user decision §9.2-1).
+    static let recordScreen = Self("recordScreen", initial: .init(.nine, modifiers: [.command, .shift]))
+    // Recording commands without a default (plan §4.21).
+    static let recordGIF = Self("recordGIF")
+    static let recordStudio = Self("recordStudio")
+    static let togglePauseRecording = Self("togglePauseRecording")
+    static let restartRecording = Self("restartRecording")
+    static let discardRecording = Self("discardRecording")
+    static let openVideoEditor = Self("openVideoEditor")
     // Unassigned by default (plan §5.1); the user sets them in Settings > Shortcuts (M7).
     static let captureTextWithoutLineBreaks = Self("captureTextWithoutLineBreaks")
     static let openHistory = Self("openHistory")
@@ -28,6 +38,7 @@ extension KeyboardShortcuts.Name {
 /// Shortcuts page sections.
 enum ShortcutGroup: String, CaseIterable, Identifiable {
     case capture = "Capture"
+    case recording = "Recording"
     case text = "Text"
     case tools = "Tools"
 
@@ -52,6 +63,25 @@ struct ShortcutBinding: Identifiable {
         ShortcutBinding(name: .scrollingCapture, command: .capture(.scrolling), title: "Scrolling Capture", group: .capture),
         ShortcutBinding(name: .selfTimer, command: .capture(.selfTimer), title: "Self-Timer", group: .capture),
         ShortcutBinding(name: .allInOne, command: .capture(.allInOne), title: "All-In-One", group: .capture),
+        ShortcutBinding(name: .recordScreen, command: .record(.area), title: "Record Screen", group: .recording),
+        ShortcutBinding(
+            name: .recordGIF, command: .record(.area, RecordingCommandOptions(format: .gif)),
+            title: "Record GIF", group: .recording
+        ),
+        ShortcutBinding(
+            name: .recordStudio, command: .record(.area, RecordingCommandOptions(studio: true)),
+            title: "Record in Studio Mode", group: .recording
+        ),
+        ShortcutBinding(
+            name: .togglePauseRecording, command: .togglePauseRecording,
+            title: "Pause / Resume Recording", group: .recording
+        ),
+        ShortcutBinding(name: .restartRecording, command: .restartRecording, title: "Restart Recording", group: .recording),
+        ShortcutBinding(
+            name: .discardRecording, command: .discardRecording(confirm: true),
+            title: "Discard Recording", group: .recording
+        ),
+        ShortcutBinding(name: .openVideoEditor, command: .openVideoEditor(nil), title: "Open Video Editor…", group: .recording),
         ShortcutBinding(name: .captureText, command: .captureText(lineBreaks: true), title: "Capture Text", group: .text),
         ShortcutBinding(
             name: .captureTextWithoutLineBreaks, command: .captureText(lineBreaks: false),

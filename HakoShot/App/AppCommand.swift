@@ -20,6 +20,28 @@ nonisolated enum AppCommand: Equatable, Sendable {
     case openSettingsPage(String)
     /// Shows the onboarding window from its first step.
     case openOnboarding
+
+    // MARK: Screen recording (kayit-teknik-plan §2.2, §4.21)
+
+    /// Starts a recording flow: selection overlay → HUD → session. While a
+    /// recording runs, the "Record Screen" hotkey sends this and it stops.
+    case record(RecordingTargetKind, RecordingCommandOptions = RecordingCommandOptions())
+    case stopRecording
+    case pauseRecording
+    case resumeRecording
+    case togglePauseRecording
+    /// Throws away what was recorded and starts again with the same target (no confirmation).
+    case restartRecording
+    /// `confirm`: ask "Discard recording?" first (control bar Trash); URL commands pass `false`.
+    case discardRecording(confirm: Bool)
+    /// `nil` means "ask the user to pick a file".
+    case openVideoEditor(URL?)
+    /// Video → GIF with Settings › Screen Recording › GIF. `action` `nil`:
+    /// a Quick Access GIF card; `.save` / `.copy`: save / copy instead (URL
+    /// `action=`). History always gets the GIF.
+    case convertToGIF(URL, action: PostCaptureAction? = nil)
+    /// `.hakostudio` package or a video file; `nil` means "ask the user to pick a file".
+    case openStudio(URL?)
     #if DEBUG
     case showDesignSystemPreview
     case debugCaptureMainDisplay
@@ -47,6 +69,57 @@ nonisolated enum AppCommand: Equatable, Sendable {
     case debugResetShortcuts
     /// Opens Settings on `page` and writes the window's content as PNG (works with the display asleep).
     case debugSnapshotSettings(page: String, url: URL)
+    /// Runs `RecordingEngine` directly and leaves the raw `.mov` (R0.2, `debug-record`).
+    case debugRecord(RecordingDebug.Parameters)
+    /// Writes `MediaInspector.info(for:)` of `file` as JSON to `out` (R0.3, `debug-media-info`).
+    case debugMediaInfo(file: URL, out: URL)
+    /// Shows a synthetic video / GIF Quick Access card (R0.5).
+    case debugQuickAccessVideoSample(format: RecordingFormat, hover: Bool)
+    /// Adds a synthetic video entry to History (R0.4).
+    case debugHistorySampleVideo
+    /// Writes the recording session / coordinator state as JSON (R1.3, R1.I).
+    case debugRecordingState(URL)
+    /// Opens the session chrome with a synthetic session and snapshots it (R1.2).
+    case debugRecordingChrome(RecordingChromeDebug.Parameters)
+    /// Opens the pre-record HUD standalone and snapshots it (R1.1).
+    case debugRecordingHUD(RecordingHUDDebug.Parameters)
+    /// Opens (and moves) the four-color test window (R1.4).
+    case debugMoveTestWindow(RecordingTargetDebug.MoveParameters)
+    case debugCloseTestWindow
+    /// Records a window with the follower, without the coordinator (R1.4).
+    case debugRecordWindow(RecordingTargetDebug.RecordWindowParameters)
+    /// Writes the audio input devices as JSON (R2.1, `debug-audio-devices`).
+    case debugAudioDevices(URL)
+    /// Runs the finalizer's audio mix on a raw file (R2.2, `debug-finalize`).
+    case debugFinalize(RecordingAudioDebug.FinalizeParameters)
+    /// Renders a file with a recipe, no UI (R3.2, `debug-render`).
+    case debugRender(RenderDebug.Parameters)
+    /// Opens the video editor and snapshots it (R3.3, `debug-video-editor`).
+    case debugVideoEditor(VideoEditorDebug.SnapshotParameters)
+    /// The video editor's save path without UI (R3.3, `debug-video-editor-apply`).
+    case debugVideoEditorApply(VideoEditorDebug.ApplyParameters)
+    /// Records, then `abort()`s: the next launch recovers the session (R7.4).
+    case debugCrashDuringRecording(RecoveryDebug.CrashParameters)
+    /// Runs a recovery pass now; `out` gets the report as JSON (R7.4).
+    case debugRecoverRecordings(out: URL?)
+    /// Camera list as JSON (R4.1, `debug-camera-devices?out=`).
+    case debugCameraDevices([URLQueryItem])
+    /// Records the camera / test pattern to a .mov (R4.1, `debug-record-camera`).
+    case debugRecordCamera(CameraDebug.RecordParameters)
+    /// Shows and snapshots the webcam bubble (R4.2, `debug-webcam-bubble`).
+    case debugWebcamBubble(CameraDebug.BubbleParameters)
+    /// Synthetic click / key into the running EventRecorder (R5.1, `debug-inject-input`).
+    case debugInjectInput(InputDebug.InjectParameters)
+    /// The running (or last finished) EventRecorder as JSON (R5.1, `debug-recording-events`).
+    case debugRecordingEvents(URL)
+    /// Click ring + keystroke badge demo / snapshots (R5.2, `debug-overlay-demo`).
+    case debugOverlayDemo(OverlayDemoDebug.Parameters)
+    /// Studio frame / export / snapshot / zoom / sample project (R6.4, `debug-render-studio-frame` …).
+    case debugStudio(StudioDebug.Command)
+    /// Studio export benchmark (R7.3, `debug-benchmark-export`).
+    case debugBenchmarkExport(StudioBenchmarkDebug.Spec)
+    /// Closes every Studio window (edits are autosaved first).
+    case debugCloseStudioWindows
     #endif
 }
 
@@ -124,6 +197,18 @@ extension AppCommand: CustomStringConvertible {
         case .openSettings: return "openSettings"
         case let .openSettingsPage(page): return "openSettings(\(page))"
         case .openOnboarding: return "openOnboarding"
+        case let .record(kind, options):
+            let details = options.description
+            return "record(\(kind.rawValue)\(details.isEmpty ? "" : ", " + details))"
+        case .stopRecording: return "stopRecording"
+        case .pauseRecording: return "pauseRecording"
+        case .resumeRecording: return "resumeRecording"
+        case .togglePauseRecording: return "togglePauseRecording"
+        case .restartRecording: return "restartRecording"
+        case let .discardRecording(confirm): return "discardRecording(confirm: \(confirm))"
+        case let .openVideoEditor(url): return "openVideoEditor(\(url?.path ?? "choose file"))"
+        case let .convertToGIF(url, action): return "convertToGIF(\(url.path)\(action.map { ", action=\($0.rawValue)" } ?? ""))"
+        case let .openStudio(url): return "openStudio(\(url?.path ?? "choose file"))"
         #if DEBUG
         case .showDesignSystemPreview: return "showDesignSystemPreview"
         case .debugCaptureMainDisplay: return "debugCaptureMainDisplay"
@@ -142,6 +227,32 @@ extension AppCommand: CustomStringConvertible {
             return "debugSetShortcut(\(name), keyCode: \(keyCode.map(String.init) ?? "none"), modifiers: \(modifiers))"
         case .debugResetShortcuts: return "debugResetShortcuts"
         case let .debugSnapshotSettings(page, url): return "debugSnapshotSettings(\(page), \(url.path))"
+        case let .debugRecord(parameters): return "debugRecord(\(parameters.source.rawValue), \(parameters.seconds) s)"
+        case let .debugMediaInfo(file, out): return "debugMediaInfo(\(file.path) -> \(out.path))"
+        case let .debugQuickAccessVideoSample(format, hover): return "debugQuickAccessVideoSample(\(format.rawValue)\(hover ? ", hover" : ""))"
+        case .debugHistorySampleVideo: return "debugHistorySampleVideo"
+        case let .debugRecordingState(url): return "debugRecordingState(\(url.path))"
+        case let .debugRecordingChrome(p): return "debugRecordingChrome(\(p.rect), \(p.snapshotDir.path))"
+        case let .debugRecordingHUD(p): return "debugRecordingHUD(\(p.rect), \(p.snapshot?.path ?? "-"))"
+        case let .debugMoveTestWindow(p): return "debugMoveTestWindow(\(p.rect.map { "\($0)" } ?? "default"))"
+        case .debugCloseTestWindow: return "debugCloseTestWindow"
+        case let .debugRecordWindow(p): return "debugRecordWindow(\(p.window), \(p.seconds) s)"
+        case let .debugAudioDevices(url): return "debugAudioDevices(\(url.path))"
+        case let .debugFinalize(p): return "debugFinalize(\(p.summary))"
+        case let .debugRender(p): return "debugRender(\(p.source.lastPathComponent) -> \(p.out.path))"
+        case let .debugVideoEditor(p): return "debugVideoEditor(\(p.source.lastPathComponent), snapshot: \(p.snapshot?.path ?? "-"))"
+        case let .debugVideoEditorApply(p): return "debugVideoEditorApply(\(p.source.lastPathComponent) -> \(p.out?.path ?? "export folder"))"
+        case let .debugCrashDuringRecording(p): return "debugCrashDuringRecording(\(p.seconds) s, \(p.source.rawValue))"
+        case let .debugRecoverRecordings(out): return "debugRecoverRecordings(\(out?.path ?? "-"))"
+        case .debugCameraDevices: return "debugCameraDevices"
+        case let .debugRecordCamera(p): return "debugRecordCamera(\(p.source.rawValue), \(p.seconds) s -> \(p.out.path))"
+        case let .debugWebcamBubble(p): return "debugWebcamBubble(\(p.options.shape.rawValue), \(p.snapshot?.path ?? "-"))"
+        case let .debugInjectInput(p): return "debugInjectInput(\(p.kind.rawValue))"
+        case let .debugRecordingEvents(url): return "debugRecordingEvents(\(url.path))"
+        case let .debugOverlayDemo(p): return "debugOverlayDemo(\(p.point.x),\(p.point.y), \(p.snapshotDir?.path ?? "-"))"
+        case let .debugStudio(command): return "debugStudio(\(command))"
+        case let .debugBenchmarkExport(spec): return "debugBenchmarkExport(\(spec.out.path))"
+        case .debugCloseStudioWindows: return "debugCloseStudioWindows"
         #endif
         }
     }

@@ -7,7 +7,7 @@ import Testing
 @MainActor
 struct OnboardingModelTests {
     @Test func stepsRunInPlanOrder() {
-        #expect(OnboardingStep.allCases == [.welcome, .screenRecording, .accessibility, .shortcuts, .launchAtLogin, .done])
+        #expect(OnboardingStep.allCases == [.welcome, .screenRecording, .accessibility, .recordingPermissions, .shortcuts, .launchAtLogin, .done])
     }
 
     @Test func nextAndBackStopAtTheEnds() {
@@ -25,6 +25,19 @@ struct OnboardingModelTests {
     @Test func readsTheFiveSystemScreenshotShortcuts() {
         let model = OnboardingModel(permissions: PermissionsService(), step: .shortcuts)
         #expect(model.systemShortcuts.map(\.id) == [28, 29, 30, 31, 184])
+    }
+
+    /// R7.4: the recording-permissions step only reads statuses.
+    @Test func recordingPermissionsStepReadsStatusesWithoutPrompting() {
+        let model = OnboardingModel(permissions: PermissionsService(), step: .recordingPermissions)
+        #expect(model.microphoneStatus == MediaPermissions.microphone)
+        #expect(model.cameraStatus == CameraPermission.status)
+        #expect(model.inputMonitoringStatus == InputMonitoringPermission.status)
+        model.back()
+        #expect(model.step == .accessibility)
+        model.next()
+        model.next()
+        #expect(model.step == .shortcuts)
     }
 }
 

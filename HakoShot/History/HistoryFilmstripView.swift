@@ -44,6 +44,58 @@ struct HistoryFilmstripActions {
     var selectFilter: (HistoryFilter) -> Void
     var restore: () -> Void
     var close: () -> Void
+    /// Card context menu.
+    var perform: (HistoryItem, HistoryCardAction) -> Void = { _, _ in }
+}
+
+/// A History card's context menu (plan §4.15): screenshots get Edit / Pin,
+/// recordings get the video editor and Convert to GIF (GIFs neither).
+nonisolated enum HistoryCardAction: Equatable, CaseIterable, Sendable {
+    case restore
+    case copy
+    case edit
+    case pin
+    case convertToGIF
+    case openInStudio
+    case delete
+
+    static func canConvertToGIF(_ item: HistoryItem) -> Bool {
+        item.kind.isVideo && !isGIF(item) && item.kind != .studio
+    }
+
+    /// Videos (not GIFs) and Studio Mode projects.
+    static func canOpenInStudio(_ item: HistoryItem) -> Bool {
+        item.kind == .studio || (item.kind.isVideo && !isGIF(item))
+    }
+
+    static func isGIF(_ item: HistoryItem) -> Bool {
+        item.kind == .gif || item.mediaFormat == .gif
+    }
+
+    /// Menu entries for `item`, in order (`nil` = divider).
+    static func menu(for item: HistoryItem) -> [HistoryCardAction?] {
+        // Studio Mode projects: Restore opens Studio; there is no mp4 to edit or convert.
+        if item.kind == .studio { return [.openInStudio, .copy, nil, .delete] }
+        var entries: [HistoryCardAction?] = [.restore, .copy, nil]
+        if item.kind.isVideo {
+            if !isGIF(item) { entries += [.edit, .openInStudio, .convertToGIF, nil] }
+        } else {
+            entries += [.edit, .pin, nil]
+        }
+        return entries + [.delete]
+    }
+
+    func title(for item: HistoryItem) -> String {
+        switch self {
+        case .restore: "Restore"
+        case .copy: "Copy"
+        case .edit: item.kind.isVideo ? "Open in Video Editor" : "Open in Editor"
+        case .pin: "Pin to Screen"
+        case .convertToGIF: "Convert to GIF"
+        case .openInStudio: "Open in Studio"
+        case .delete: "Delete"
+        }
+    }
 }
 
 /// Full-screen dark HUD with filter pills, a horizontal filmstrip of recent
@@ -119,6 +171,15 @@ struct HistoryFilmstripView: View {
                     actions.restore()
                 }
                 .onTapGesture { model.selectedID = item.id }
+                .contextMenu {
+                    ForEach(Array(HistoryCardAction.menu(for: item).enumerated()), id: \.offset) { _, entry in
+                        if let entry {
+                            Button(entry.title(for: item)) { actions.perform(item, entry) }
+                        } else {
+                            Divider()
+                        }
+                    }
+                }
             }
         }
         .fixedSize()
@@ -149,7 +210,7 @@ struct HistoryFilmstripView: View {
     }
 
     private var hints: some View {
-        Text("←  →  Browse     ↩  Restore     ⌘C  Copy     ⌘E  Edit     ⌘P  Pin     ⌫  Delete     esc  Close")
+        Text("←  →  Browse     ↩  Restore     ⌘C  Copy     ⌘E  Edit     ⌘P  Pin     ⌘G  GIF     ⌫  Delete     esc  Close")
             .font(Tokens.Typography.hudLabel)
             .foregroundStyle(Color(nsColor: Tokens.Palette.hudTextSecondary))
     }
@@ -189,6 +250,12 @@ private struct HistoryCard: View {
         }
         .frame(width: height * aspect, height: height)
         .clipShape(shape)
+        .overlay(alignment: .bottomLeading) {
+            if let durationLabel {
+                durationBadge(durationLabel)
+                    .padding(Tokens.Spacing.s)
+            }
+        }
         .overlay {
             if isSelected {
                 shape
@@ -199,6 +266,27 @@ private struct HistoryCard: View {
         .dsShadow(Tokens.Shadow.floatingCard)
         .opacity(isSelected ? 1 : 0.8)
         .contentShape(shape)
+    }
+
+    /// `▶︎ m:ss` pill (plan §4.15: "Film şeridinde süre rozeti + ▶︎ glyph").
+    private func durationBadge(_ text: String) -> some View {
+        HStack(spacing: Tokens.Spacing.xs) {
+            Image(systemName: "play.fill")
+                .font(.system(size: Tokens.Recording.durationBadgeGlyphSize, weight: .bold))
+            Text(text)
+                .font(Tokens.Recording.durationBadgeFont)
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, Tokens.Recording.durationBadgeInset)
+        .frame(height: Tokens.Recording.durationBadgeHeight)
+        .background(Capsule().fill(Color.dsHudControlFill))
+    }
+
+    /// `m:ss` (or `nil` for screenshots / entries with no known duration).
+    private var durationLabel: String? {
+        guard let duration = item.durationSeconds else { return nil }
+        let total = max(0, Int(duration.rounded()))
+        return String(format: "%d:%02d", total / 60, total % 60)
     }
 
     private var aspect: CGFloat { Self.aspect(of: item) }

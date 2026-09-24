@@ -52,4 +52,15 @@ struct ClipboardWriter {
         pasteboard.clearContents()
         return pasteboard.writeObjects([item])
     }
+
+    /// Clears `pasteboard` and writes a file reference to `url` (kayit-teknik-plan
+    /// §4.15: recordings go on the clipboard as `public.file-url`, no embedded data),
+    /// so pasting into Finder copies the file and Slack / Mail attach it. The URL is
+    /// written as an `NSURL` pasteboard object (`public.file-url` + its string
+    /// representation). Returns whether the write succeeded.
+    @discardableResult
+    func writeFile(url: URL) -> Bool {
+        pasteboard.clearContents()
+        return pasteboard.writeObjects([url.standardizedFileURL as NSURL])
+    }
 }

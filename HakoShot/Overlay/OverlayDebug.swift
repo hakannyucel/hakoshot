@@ -44,6 +44,7 @@ enum OverlayDebug {
         case "allInOne": config.mode = .allInOne
         case "scrolling": config.mode = .scrolling
         case "text": config.mode = .text
+        case "recording": config.mode = .recording
         default: break
         }
         if arguments.contains(freezeArgument) { config.freeze = true }

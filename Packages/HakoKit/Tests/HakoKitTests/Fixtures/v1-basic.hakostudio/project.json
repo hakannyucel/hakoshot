@@ -1,0 +1,122 @@
+{
+  "audio" : {
+    "mono" : false,
+    "muted" : false,
+    "trackGains" : [
+
+    ],
+    "volume" : 1
+  },
+  "camera" : {
+    "corner" : "bottomRight",
+    "mirrored" : false,
+    "shape" : "squircle",
+    "size" : 0.18,
+    "visible" : true
+  },
+  "canvas" : {
+    "aspectRatio" : "16:9",
+    "background" : {
+      "alignment" : "center",
+      "aspectRatio" : "auto",
+      "autoBalance" : false,
+      "cornerRadius" : 8,
+      "fill" : {
+        "color" : "#336699FF",
+        "kind" : "solid"
+      },
+      "inset" : 0,
+      "padding" : 32,
+      "shadow" : {
+        "offsetX" : 0,
+        "offsetY" : 12,
+        "opacity" : 0.5,
+        "radius" : 24
+      }
+    },
+    "outputHeight" : 720
+  },
+  "createdAt" : "2026-09-21T14:13:20Z",
+  "cursor" : {
+    "clickEffect" : true,
+    "hideWhenIdle" : true,
+    "idleDelay" : 2,
+    "scale" : 2,
+    "smoothing" : 0.5,
+    "style" : "system",
+    "visible" : true
+  },
+  "edit" : {
+    "cuts" : [
+      {
+        "end" : 0.5,
+        "start" : 0.4
+      }
+    ],
+    "trim" : {
+      "end" : 0.9,
+      "start" : 0.1
+    }
+  },
+  "export" : {
+    "codec" : "h264",
+    "format" : "mp4",
+    "fps" : 30,
+    "gif" : {
+      "fps" : 15,
+      "optimize" : true,
+      "quality" : 0.8,
+      "width" : 800
+    },
+    "quality" : "high"
+  },
+  "formatVersion" : 1,
+  "keystrokes" : {
+    "position" : "bottomCenter",
+    "size" : "medium",
+    "style" : "dark",
+    "visible" : false
+  },
+  "motionBlur" : {
+    "enabled" : true,
+    "intensity" : 0.4
+  },
+  "source" : {
+    "audioTracks" : [
+
+    ],
+    "cursorBakedIn" : false,
+    "duration" : 1,
+    "fps" : 30,
+    "media" : {
+      "cursor" : "cursor.bin",
+      "cursorsDirectory" : "cursors",
+      "events" : "events.json",
+      "screen" : "screen.mov"
+    },
+    "pixelHeight" : 72,
+    "pixelWidth" : 128,
+    "pointHeight" : 36,
+    "pointWidth" : 64
+  },
+  "zoom" : {
+    "auto" : true,
+    "defaultScale" : 2,
+    "segments" : [
+      {
+        "easing" : "easeInOutCubic",
+        "end" : 0.7,
+        "focus" : {
+          "mode" : "fixed",
+          "x" : 0.25,
+          "y" : 0.25
+        },
+        "id" : "5E6A0000-0000-4000-8000-000000000001",
+        "isManual" : true,
+        "scale" : 2.5,
+        "start" : 0.2
+      }
+    ],
+    "speed" : "normal"
+  }
+}

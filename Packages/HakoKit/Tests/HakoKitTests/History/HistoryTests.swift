@@ -30,6 +30,30 @@ enum HistoryFixture {
             thumbnailFileName: HistoryLayout.thumbnailFileName(id: id, date: date, calendar: utc)
         )
     }
+
+    /// A recorded video (or GIF) entry, with the R0.4 video fields filled in.
+    static func videoItem(
+        daysAgo: Double = 0,
+        kind: HistoryCaptureKind = .recording,
+        format: HistoryMediaFormat = .video,
+        duration: Double = 3.5,
+        id: UUID = UUID()
+    ) -> HistoryItem {
+        let date = now.addingTimeInterval(-daysAgo * 86_400)
+        return HistoryItem(
+            id: id,
+            date: date,
+            kind: kind,
+            pixelWidth: 1280,
+            pixelHeight: 720,
+            scale: 2,
+            imageFileName: HistoryLayout.imageFileName(id: id, date: date, calendar: utc),
+            thumbnailFileName: HistoryLayout.thumbnailFileName(id: id, date: date, calendar: utc),
+            mediaFileName: HistoryLayout.mediaFileName(id: id, date: date, format: format, calendar: utc),
+            durationSeconds: duration,
+            mediaFormat: format
+        )
+    }
 }
 
 @Suite("HistoryIndex")
@@ -216,5 +240,160 @@ struct HistoryThumbnailTests {
         let decoded = try #require(HistoryThumbnail.downsample(data, maxPixelSize: 10_000))
         #expect(decoded.width == 40)
         #expect(decoded.height == 30)
+    }
+}
+
+// MARK: - R0.4: video / GIF / Studio history entries
+
+@Suite("HistoryItem video fields")
+struct HistoryItemVideoTests {
+    @Test func decodesOldEntryWithoutVideoFields() throws {
+        // A pre-R0.4 index entry: no mediaFileName/durationSeconds/mediaFormat/
+        // eventsFileName/studioPackageName keys at all.
+        let id = UUID()
+        let json = """
+        {"id":"\(id.uuidString)","date":"2026-09-20T10:00:00Z",
+         "imageFileName":"2026-09/\(id.uuidString).png","kind":"area",
+         "pixelWidth":200,"pixelHeight":100,"scale":2}
+        """
+        let item = try HistoryIndex.makeDecoder().decode(HistoryItem.self, from: Data(json.utf8))
+        #expect(item.mediaFileName == nil)
+        #expect(item.durationSeconds == nil)
+        #expect(item.mediaFormat == nil)
+        #expect(item.eventsFileName == nil)
+        #expect(item.studioPackageName == nil)
+        #expect(item.kind == .area)
+        #expect(item.ownedFileNames == [item.imageFileName, item.thumbnailFileName])
+    }
+
+    @Test func encodesAndDecodesVideoFieldsRoundTrip() throws {
+        let video = HistoryFixture.videoItem(kind: .recording, format: .video, duration: 12.25)
+        let data = try HistoryIndex.makeEncoder().encode(video)
+        let decoded = try HistoryIndex.makeDecoder().decode(HistoryItem.self, from: data)
+        #expect(decoded == video)
+        #expect(decoded.mediaFileName == video.mediaFileName)
+        #expect(decoded.durationSeconds == 12.25)
+        #expect(decoded.mediaFormat == .video)
+    }
+
+    @Test func unknownKindAndMediaFormatFallBackInsteadOfThrowing() throws {
+        // Forward compatibility: a future build's `kind`/`mediaFormat` raw
+        // values, and any extra top-level keys, must not fail decoding.
+        let id = UUID()
+        let json = """
+        {"id":"\(id.uuidString)","date":"2026-09-20T10:00:00Z",
+         "imageFileName":"2026-09/\(id.uuidString).png","kind":"someFutureKind",
+         "mediaFormat":"webm","somethingNew":true}
+        """
+        let item = try HistoryIndex.makeDecoder().decode(HistoryItem.self, from: Data(json.utf8))
+        #expect(item.kind == .unknown)
+        #expect(item.mediaFormat == nil)
+    }
+
+    @Test func ownedFileNamesIncludesMediaEventsAndStudioPackage() {
+        var item = HistoryFixture.videoItem()
+        #expect(item.ownedFileNames.contains(item.mediaFileName!))
+        item.eventsFileName = "2026-09/x-events.json"
+        item.studioPackageName = "2026-09/x.hakostudio"
+        #expect(item.ownedFileNames.contains(item.eventsFileName!))
+        #expect(item.ownedFileNames.contains(item.studioPackageName!))
+        #expect(item.ownedFileNames.count == 5)
+    }
+
+    @Test func captureKindIsVideo() {
+        #expect(HistoryCaptureKind.recording.isVideo)
+        #expect(HistoryCaptureKind.gif.isVideo)
+        #expect(HistoryCaptureKind.studio.isVideo)
+        #expect(!HistoryCaptureKind.area.isVideo)
+        #expect(!HistoryCaptureKind.scrolling.isVideo)
+    }
+}
+
+@Suite("HistoryFilter recordings")
+struct HistoryFilterRecordingsTests {
+    @Test func recordingsMatchesVideoGifAndStudioOnly() {
+        #expect(HistoryFilter.recordings.matches(.recording))
+        #expect(HistoryFilter.recordings.matches(.gif))
+        #expect(HistoryFilter.recordings.matches(.studio))
+        #expect(!HistoryFilter.recordings.matches(.area))
+        #expect(!HistoryFilter.recordings.matches(.scrolling))
+        #expect(!HistoryFilter.recordings.matches(.text))
+    }
+
+    @Test func screenshotsExcludesVideoKinds() {
+        #expect(!HistoryFilter.screenshots.matches(.recording))
+        #expect(!HistoryFilter.screenshots.matches(.gif))
+        #expect(!HistoryFilter.screenshots.matches(.studio))
+        #expect(HistoryFilter.screenshots.matches(.area))
+        #expect(HistoryFilter.screenshots.matches(.window))
+    }
+
+    @Test func indexRecentFiltersToRecordings() {
+        let recording = HistoryFixture.videoItem(kind: .recording)
+        let gif = HistoryFixture.videoItem(daysAgo: 1, kind: .gif, format: .gif)
+        let studio = HistoryFixture.videoItem(daysAgo: 2, kind: .studio)
+        let screenshot = HistoryFixture.item(daysAgo: 3)
+        let index = HistoryIndex(items: [recording, gif, studio, screenshot])
+        let ids = Set(index.recent(filter: .recordings).map(\.id))
+        #expect(ids == Set([recording.id, gif.id, studio.id]))
+    }
+}
+
+@Suite("VideoRetentionPolicy")
+struct VideoRetentionPolicyTests {
+    @Test func keepsEverythingUnderTheCap() {
+        let items = (0..<3).map { HistoryFixture.videoItem(daysAgo: Double($0)) }
+        let sizes = Dictionary(uniqueKeysWithValues: items.map { ($0.id, Int64(1_000)) })
+        let policy = VideoRetentionPolicy(byteCap: 1_000_000)
+        #expect(policy.itemsToEvict(in: items, sizes: sizes).isEmpty)
+    }
+
+    @Test func evictsOldestFirstUntilUnderCap() {
+        let oldest = HistoryFixture.videoItem(daysAgo: 5)
+        let middle = HistoryFixture.videoItem(daysAgo: 2)
+        let newest = HistoryFixture.videoItem(daysAgo: 0)
+        let sizes: [UUID: Int64] = [oldest.id: 500, middle.id: 500, newest.id: 500]
+        let policy = VideoRetentionPolicy(byteCap: 800)
+        // 1500 total, cap 800: evict oldest (500) -> 1000, still over cap;
+        // evict middle (500) -> 500, under cap, stop. Newest is kept.
+        let evicted = policy.itemsToEvict(in: [newest, middle, oldest], sizes: sizes)
+        #expect(evicted.map(\.id) == [oldest.id, middle.id])
+    }
+
+    @Test func ignoresEntriesMissingFromSizes() {
+        let known = HistoryFixture.videoItem(daysAgo: 3)
+        let unknown = HistoryFixture.videoItem(daysAgo: 5)
+        let sizes: [UUID: Int64] = [known.id: 2_000_000_000]
+        let policy = VideoRetentionPolicy(byteCap: 1_000_000_000)
+        let evicted = policy.itemsToEvict(in: [known, unknown], sizes: sizes)
+        #expect(evicted.map(\.id) == [known.id])
+    }
+
+    @Test func defaultCapIsTenGigabytes() {
+        #expect(VideoRetentionPolicy().byteCap == 10_000_000_000)
+        #expect(HistoryRetention.videoByteCap == 10_000_000_000)
+    }
+
+    @Test func exactlyAtCapDoesNotEvict() {
+        let items = (0..<2).map { HistoryFixture.videoItem(daysAgo: Double($0)) }
+        let sizes = Dictionary(uniqueKeysWithValues: items.map { ($0.id, Int64(500)) })
+        let policy = VideoRetentionPolicy(byteCap: 1_000)
+        #expect(policy.itemsToEvict(in: items, sizes: sizes).isEmpty)
+    }
+}
+
+@Suite("HistoryLayout video naming")
+struct HistoryLayoutVideoTests {
+    @Test func mediaFileNamesUseFormatExtension() throws {
+        let id = try #require(UUID(uuidString: "11111111-2222-3333-4444-555555555555"))
+        let date = HistoryFixture.now
+        #expect(HistoryLayout.mediaFileName(id: id, date: date, format: .video, calendar: HistoryFixture.utc)
+            == "2026-09/11111111-2222-3333-4444-555555555555.mp4")
+        #expect(HistoryLayout.mediaFileName(id: id, date: date, format: .gif, calendar: HistoryFixture.utc)
+            == "2026-09/11111111-2222-3333-4444-555555555555.gif")
+        #expect(HistoryLayout.eventsFileName(id: id, date: date, calendar: HistoryFixture.utc)
+            == "2026-09/11111111-2222-3333-4444-555555555555-events.json")
+        #expect(HistoryLayout.studioPackageName(id: id, date: date, calendar: HistoryFixture.utc)
+            == "2026-09/11111111-2222-3333-4444-555555555555.hakostudio")
     }
 }
