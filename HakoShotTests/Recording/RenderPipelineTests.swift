@@ -244,8 +244,10 @@ struct RenderPipelineTests {
         #expect(Int((delay * 100).rounded()) == 200)
     }
 
-    @Test(.timeLimit(.minutes(2)))
-    func cancelLeavesNoFile() async throws {
+    // Exercise cancellation while the audio/video reader queues are active,
+    // at several progress points, to cover read/cancel races.
+    @Test(.timeLimit(.minutes(2)), arguments: [0.005, 0.01, 0.02, 0.035, 0.05, 0.075, 0.1, 0.15])
+    func cancelLeavesNoFile(cancelAfter: Double) async throws {
         let dir = RenderTestMedia.outputURL("cancel-\(UUID().uuidString)")
         let out = dir.appending(path: "cancelled.mp4")
         defer { try? FileManager.default.removeItem(at: dir) }
@@ -254,7 +256,7 @@ struct RenderPipelineTests {
         let task = Task {
             try await RenderPipeline(allowsPassthrough: false).render(
                 source: source, recipe: VideoEditRecipe(fps: 30), to: out,
-                progress: { value in if value > 0.05 { started.withLock { $0 = true } } }
+                progress: { value in if value > cancelAfter { started.withLock { $0 = true } } }
             )
         }
         while !started.withLock({ $0 }) { try await Task.sleep(for: .milliseconds(10)) }

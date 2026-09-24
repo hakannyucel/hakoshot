@@ -478,10 +478,12 @@ nonisolated final class ReencodeJob: @unchecked Sendable {
         }
 
         if cancelled.withLock({ $0 }) || Task.isCancelled {
+            reader.cancelReading()
             writer.cancelWriting()
             throw CancellationError()
         }
         if let message = failure.withLock({ $0 }) {
+            reader.cancelReading()
             writer.cancelWriting()
             throw RenderError.cannotWrite(message)
         }
@@ -498,7 +500,8 @@ nonisolated final class ReencodeJob: @unchecked Sendable {
 
     func cancel() {
         cancelled.withLock { $0 = true }
-        reader.cancelReading()
+        // The reader is cancelled only after both pumps drain. Cancelling
+        // here can race copyNextSampleBuffer inside AVFoundation.
     }
 
     // MARK: Private
@@ -507,6 +510,7 @@ nonisolated final class ReencodeJob: @unchecked Sendable {
     /// drained, the job is cancelled or appending fails.
     private func pump(isVideo: Bool, done: @escaping @Sendable () -> Void) {
         guard let input = isVideo ? videoInput : audioInput else { return done() }
+        let queue = isVideo ? videoQueue : audioQueue
         let finished = OSAllocatedUnfairLock(initialState: false)
         let total = max(duration.seconds, 1e-3)
         let finish: @Sendable () -> Void = { [self] in
@@ -517,11 +521,14 @@ nonisolated final class ReencodeJob: @unchecked Sendable {
             }
             done()
         }
-        activity.withLock { $0.finishers[isVideo] = finish }
-        input.requestMediaDataWhenReady(on: isVideo ? videoQueue : audioQueue) { [self] in
+        // The watchdog must not finish an input or release the waiter while
+        // its queue is still reading/appending a sample.
+        activity.withLock { $0.finishers[isVideo] = { queue.async(execute: finish) } }
+        input.requestMediaDataWhenReady(on: queue) { [self] in
+            guard !finished.withLock({ $0 }) else { return }
             guard let input = isVideo ? videoInput : audioInput else { return finish() }
             while input.isReadyForMoreMediaData {
-                if cancelled.withLock({ $0 }) { return finish() }
+                if cancelled.withLock({ $0 }) || failure.withLock({ $0 != nil }) { return finish() }
                 let next = isVideo ? videoOutput.copyNextSampleBuffer() : audioOutput?.copyNextSampleBuffer()
                 guard var buffer = next else { return finish() }
                 if !isVideo, audioProcessor.isActive {
@@ -546,8 +553,9 @@ nonisolated final class ReencodeJob: @unchecked Sendable {
 
     /// Polls twice a second until every pump finished: a failed writer or
     /// a stall longer than `stallTimeout` fails the job and releases the
-    /// pumps (as does a cancel that leaves a pump waiting), so `run()`
-    /// returns instead of hanging.
+    /// pumps (as does a cancel that leaves a pump waiting for writer
+    /// readiness). A read already in progress must return before its queue
+    /// can finish; tearing down the reader concurrently is unsafe.
     private func watch() {
         DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 0.5) { [self] in
             let (finishers, idle) = activity.withLock { (Array($0.finishers.values), ContinuousClock.now - $0.lastSample) }
@@ -573,7 +581,6 @@ nonisolated final class ReencodeJob: @unchecked Sendable {
 
     private func fail(_ message: String) {
         failure.withLock { if $0 == nil { $0 = message } }
-        reader.cancelReading()
     }
 }
 
