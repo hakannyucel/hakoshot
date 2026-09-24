@@ -1,0 +1,17 @@
+// Signing.example.xcconfig
+// Copy to Signing.xcconfig (git-ignored) and fill in your identity. A stable
+// identity keeps TCC grants (Screen Recording, Accessibility) across rebuilds;
+// without it the app is signed ad-hoc and permissions reset on every build.
+//
+// Manual style: no Xcode account sign-in and no provisioning profile needed
+// (non-sandboxed Mac app, no restricted entitlements).
+//
+// Team ID is the certificate's OU field:
+//   security find-certificate -c "Apple Development: <you>" -p | openssl x509 -noout -subject
+// Identity hash (SHA-1):
+//   security find-identity -v -p codesigning
+
+CODE_SIGN_STYLE = Manual
+DEVELOPMENT_TEAM = <TEAM_ID>
+CODE_SIGN_IDENTITY = <SHA1_HASH>
+PROVISIONING_PROFILE_SPECIFIER =

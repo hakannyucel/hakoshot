@@ -1,0 +1,381 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000301 /* HakoKit in Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000501 /* HakoKit */; };
+		A10000000000000000000302 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000502 /* KeyboardShortcuts */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A10000000000000000000701 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A10000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A10000000000000000000101;
+			remoteInfo = HakoShot;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		A10000000000000000000201 /* HakoShot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HakoShot.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000202 /* HakoShotTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HakoShotTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000203 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
+		A10000000000000000000204 /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A10000000000000000000901 /* Exceptions for "HakoShot" folder in "HakoShot" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Resources/Info.plist,
+			);
+			target = A10000000000000000000101 /* HakoShot */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		A10000000000000000000401 /* HakoShot */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A10000000000000000000901 /* Exceptions for "HakoShot" folder in "HakoShot" target */,
+			);
+			path = HakoShot;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000402 /* HakoShotTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = HakoShotTests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A10000000000000000000601 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000301 /* HakoKit in Frameworks */,
+				A10000000000000000000302 /* KeyboardShortcuts in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000000000000000000602 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A10000000000000000000011 = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000401 /* HakoShot */,
+				A10000000000000000000402 /* HakoShotTests */,
+				A10000000000000000000013 /* Config */,
+				A10000000000000000000012 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A10000000000000000000012 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000201 /* HakoShot.app */,
+				A10000000000000000000202 /* HakoShotTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000013 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000203 /* Base.xcconfig */,
+				A10000000000000000000204 /* Signing.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A10000000000000000000101 /* HakoShot */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000000000000000000822 /* Build configuration list for PBXNativeTarget "HakoShot" */;
+			buildPhases = (
+				A10000000000000000000611 /* Sources */,
+				A10000000000000000000601 /* Frameworks */,
+				A10000000000000000000621 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A10000000000000000000401 /* HakoShot */,
+			);
+			name = HakoShot;
+			packageProductDependencies = (
+				A10000000000000000000501 /* HakoKit */,
+				A10000000000000000000502 /* KeyboardShortcuts */,
+			);
+			productName = HakoShot;
+			productReference = A10000000000000000000201 /* HakoShot.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A10000000000000000000102 /* HakoShotTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000000000000000000823 /* Build configuration list for PBXNativeTarget "HakoShotTests" */;
+			buildPhases = (
+				A10000000000000000000612 /* Sources */,
+				A10000000000000000000602 /* Frameworks */,
+				A10000000000000000000622 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A10000000000000000000702 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A10000000000000000000402 /* HakoShotTests */,
+			);
+			name = HakoShotTests;
+			packageProductDependencies = (
+			);
+			productName = HakoShotTests;
+			productReference = A10000000000000000000202 /* HakoShotTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A10000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2650;
+				LastUpgradeCheck = 2650;
+				TargetAttributes = {
+					A10000000000000000000101 = {
+						CreatedOnToolsVersion = 26.5;
+					};
+					A10000000000000000000102 = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = A10000000000000000000101;
+					};
+				};
+			};
+			buildConfigurationList = A10000000000000000000821 /* Build configuration list for PBXProject "HakoShot" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A10000000000000000000011;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A10000000000000000000511 /* XCLocalSwiftPackageReference "Packages/HakoKit" */,
+				A10000000000000000000512 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = A10000000000000000000012 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A10000000000000000000101 /* HakoShot */,
+				A10000000000000000000102 /* HakoShotTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A10000000000000000000621 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000000000000000000622 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A10000000000000000000611 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000000000000000000612 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A10000000000000000000702 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A10000000000000000000101 /* HakoShot */;
+			targetProxy = A10000000000000000000701 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		A10000000000000000000801 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A10000000000000000000203 /* Base.xcconfig */;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		A10000000000000000000802 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A10000000000000000000203 /* Base.xcconfig */;
+			buildSettings = {
+			};
+			name = Release;
+		};
+		A10000000000000000000803 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = HakoShot/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.hakanyucel.HakoShot;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Debug;
+		};
+		A10000000000000000000804 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = HakoShot/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.hakanyucel.HakoShot;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Release;
+		};
+		A10000000000000000000805 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hakanyucel.HakoShotTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HakoShot.app/Contents/MacOS/HakoShot";
+			};
+			name = Debug;
+		};
+		A10000000000000000000806 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hakanyucel.HakoShotTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HakoShot.app/Contents/MacOS/HakoShot";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A10000000000000000000821 /* Build configuration list for PBXProject "HakoShot" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000000000000000000801 /* Debug */,
+				A10000000000000000000802 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000000000000000000822 /* Build configuration list for PBXNativeTarget "HakoShot" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000000000000000000803 /* Debug */,
+				A10000000000000000000804 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000000000000000000823 /* Build configuration list for PBXNativeTarget "HakoShotTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000000000000000000805 /* Debug */,
+				A10000000000000000000806 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		A10000000000000000000511 /* XCLocalSwiftPackageReference "Packages/HakoKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/HakoKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A10000000000000000000512 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sindresorhus/KeyboardShortcuts";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.1.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A10000000000000000000501 /* HakoKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A10000000000000000000511 /* XCLocalSwiftPackageReference "Packages/HakoKit" */;
+			productName = HakoKit;
+		};
+		A10000000000000000000502 /* KeyboardShortcuts */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A10000000000000000000512 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
+			productName = KeyboardShortcuts;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = A10000000000000000000001 /* Project object */;
+}

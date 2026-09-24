@@ -1,0 +1,151 @@
+{
+  "annotations" : [
+    {
+      "id" : "00000000-0000-4000-8000-000000000001",
+      "kind" : "rectangle",
+      "shape" : {
+        "cornerRadius" : 2,
+        "rect" : [
+          [
+            4,
+            4
+          ],
+          [
+            20,
+            12
+          ]
+        ]
+      },
+      "style" : {
+        "color" : "#FF375FFF",
+        "opacity" : 1,
+        "shadow" : false,
+        "strokeWidth" : 2
+      }
+    },
+    {
+      "id" : "00000000-0000-4000-8000-000000000002",
+      "kind" : "arrow",
+      "shape" : {
+        "arrowStyle" : "standard",
+        "end" : [
+          58,
+          20
+        ],
+        "start" : [
+          40,
+          8
+        ]
+      },
+      "style" : {
+        "color" : "#FFCC00FF",
+        "opacity" : 1,
+        "shadow" : true,
+        "strokeWidth" : 3
+      }
+    },
+    {
+      "id" : "00000000-0000-4000-8000-000000000003",
+      "kind" : "text",
+      "shape" : {
+        "alignment" : "left",
+        "fontSize" : 12,
+        "frame" : [
+          [
+            4,
+            30
+          ],
+          [
+            30,
+            14
+          ]
+        ],
+        "text" : "Hi",
+        "textStyle" : "boxed"
+      },
+      "style" : {
+        "color" : "#0A84FFFF",
+        "opacity" : 1,
+        "shadow" : true,
+        "strokeWidth" : 12
+      }
+    },
+    {
+      "id" : "00000000-0000-4000-8000-000000000004",
+      "kind" : "counter",
+      "shape" : {
+        "center" : [
+          50,
+          38
+        ],
+        "counterStyle" : "filledCircle",
+        "diameter" : 12,
+        "number" : 1
+      },
+      "style" : {
+        "color" : "#34C759FF",
+        "opacity" : 1,
+        "shadow" : true,
+        "strokeWidth" : 12
+      }
+    },
+    {
+      "id" : "00000000-0000-4000-8000-000000000005",
+      "kind" : "redaction",
+      "shape" : {
+        "method" : "blackOut",
+        "rect" : [
+          [
+            36,
+            28
+          ],
+          [
+            8,
+            6
+          ]
+        ],
+        "seed" : 1,
+        "strength" : 0
+      },
+      "style" : {
+        "color" : "#000000FF",
+        "opacity" : 1,
+        "shadow" : false,
+        "strokeWidth" : 12
+      }
+    }
+  ],
+  "canvas" : {
+    "height" : 48,
+    "scale" : 2,
+    "width" : 64
+  },
+  "createdAt" : "2026-09-21T14:13:20Z",
+  "formatVersion" : 1,
+  "layers" : [
+    {
+      "assetID" : "0B5E7C1A-0000-4000-8000-000000000001",
+      "frame" : [
+        [
+          0,
+          0
+        ],
+        [
+          64,
+          48
+        ]
+      ],
+      "id" : "00000000-0000-4000-8000-000000000009"
+    }
+  ],
+  "source" : {
+    "capturedAt" : "2026-09-21T14:13:20Z",
+    "displayScale" : 2,
+    "mode" : "area"
+  },
+  "transform" : {
+    "flipHorizontal" : false,
+    "flipVertical" : false,
+    "rotationQuarterTurns" : 0
+  }
+}

@@ -1,0 +1,64 @@
+// Base.xcconfig
+// Project-level build settings shared by every target and configuration.
+// Target-specific values (bundle id, Info.plist path, test host) live in
+// HakoShot.xcodeproj/project.pbxproj target build settings.
+
+// Signing: ad-hoc by default so a fresh clone builds. Personal identity lives
+// in the git-ignored Signing.xcconfig (copy Signing.example.xcconfig), which is
+// included at the end so it overrides these.
+CODE_SIGN_STYLE = Manual
+CODE_SIGN_IDENTITY = -
+DEVELOPMENT_TEAM =
+
+// MARK: Platform
+SDKROOT = macosx
+SUPPORTED_PLATFORMS = macosx
+MACOSX_DEPLOYMENT_TARGET = 26.0
+
+// MARK: Versioning
+MARKETING_VERSION = 0.1.0
+CURRENT_PROJECT_VERSION = 1
+
+// MARK: Swift
+SWIFT_VERSION = 6.0
+SWIFT_STRICT_CONCURRENCY = complete
+SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor
+SWIFT_APPROACHABLE_CONCURRENCY = YES
+SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES
+SWIFT_EMIT_LOC_STRINGS = YES
+SWIFT_TREAT_WARNINGS_AS_ERRORS = NO
+
+// MARK: Sandbox / runtime (see reports/hakoshot-teknik-plan.md §2.3)
+ENABLE_APP_SANDBOX = NO
+ENABLE_HARDENED_RUNTIME = YES
+ENABLE_USER_SCRIPT_SANDBOXING = YES
+
+// MARK: General
+ALWAYS_SEARCH_USER_PATHS = NO
+CLANG_ENABLE_MODULES = YES
+CLANG_ENABLE_OBJC_ARC = YES
+ENABLE_STRICT_OBJC_MSGSEND = YES
+LOCALIZATION_PREFERS_STRING_CATALOGS = YES
+ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES
+STRING_CATALOG_GENERATE_SYMBOLS = YES
+DEAD_CODE_STRIPPING = YES
+COPY_PHASE_STRIP = NO
+DEBUG_INFORMATION_FORMAT = dwarf-with-dsym
+GCC_C_LANGUAGE_STANDARD = gnu17
+CLANG_CXX_LANGUAGE_STANDARD = gnu++20
+
+// MARK: Per-configuration
+ONLY_ACTIVE_ARCH[config=Debug] = YES
+ENABLE_TESTABILITY[config=Debug] = YES
+SWIFT_OPTIMIZATION_LEVEL[config=Debug] = -Onone
+SWIFT_OPTIMIZATION_LEVEL[config=Release] = -O
+SWIFT_COMPILATION_MODE[config=Release] = wholemodule
+SWIFT_ACTIVE_COMPILATION_CONDITIONS[config=Debug] = DEBUG $(inherited)
+GCC_PREPROCESSOR_DEFINITIONS[config=Debug] = DEBUG=1 $(inherited)
+GCC_OPTIMIZATION_LEVEL[config=Debug] = 0
+DEBUG_INFORMATION_FORMAT[config=Debug] = dwarf
+MTL_ENABLE_DEBUG_INFO[config=Debug] = INCLUDE_SOURCE
+ENABLE_NS_ASSERTIONS[config=Release] = NO
+
+// MARK: Personal signing (optional, git-ignored)
+#include? "Signing.xcconfig"

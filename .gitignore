@@ -1,0 +1,39 @@
+# Build output
+build/
+build-*/
+DerivedData/
+*.xcarchive
+*.xcresult
+*.dSYM
+*.dSYM.zip
+*.profraw
+*.profdata
+
+# Swift Package Manager
+.swiftpm/
+.build/
+Packages/*/Package.resolved
+
+# Xcode per-user state
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+
+# Personal code signing (template: Config/Signing.example.xcconfig)
+Config/Signing.xcconfig
+
+# Research notes and decisions (local only)
+reports/
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# macOS
+.DS_Store
+._*
